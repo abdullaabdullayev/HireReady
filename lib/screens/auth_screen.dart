@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/interactions.dart';
 import 'dashboard_screen.dart';
 
 /// Combined Sign up / Log in screen (UI only — no real auth).
@@ -40,8 +41,14 @@ class _AuthScreenState extends State<AuthScreen> {
                 decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(14)),
                 child: Row(
                   children: [
-                    _segment('Sign up', _signUp, () => setState(() => _signUp = true)),
-                    _segment('Log in', !_signUp, () => setState(() => _signUp = false)),
+                    _segment('Sign up', _signUp, () {
+                      HapticType.selection.fire();
+                      setState(() => _signUp = true);
+                    }),
+                    _segment('Log in', !_signUp, () {
+                      HapticType.selection.fire();
+                      setState(() => _signUp = false);
+                    }),
                   ],
                 ),
               ),
@@ -85,6 +92,7 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
+                  HapticType.light.fire();
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(builder: (_) => const DashboardScreen()),
                     (route) => false,

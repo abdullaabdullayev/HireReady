@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
+import '../widgets/interactions.dart';
 
 /// Analytics / progress dashboard (a bottom-nav tab, and reachable as
 /// "view analytics" from the flow).
@@ -35,11 +36,11 @@ class ProgressScreen extends StatelessWidget {
         // Overview tiles
         Row(
           children: [
-            _tile('${state.sessionsCompleted}', 'Sessions', AppColors.primary),
+            _tile(state.sessionsCompleted, 'Sessions', AppColors.primary),
             const SizedBox(width: 12),
-            _tile('${state.questionsAnswered}', 'Questions', AppColors.info),
+            _tile(state.questionsAnswered, 'Questions', AppColors.info),
             const SizedBox(width: 12),
-            _tile('72%', 'Avg score', AppColors.accent),
+            _tile(72, 'Avg score', AppColors.accent, suffix: '%'),
           ],
         ),
         const SizedBox(height: 20),
@@ -162,7 +163,7 @@ class ProgressScreen extends StatelessWidget {
     );
   }
 
-  Widget _tile(String value, String label, Color color) {
+  Widget _tile(int value, String label, Color color, {String suffix = ''}) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 18),
@@ -173,7 +174,11 @@ class ProgressScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(value, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color)),
+            AnimatedCounter(
+              value: value,
+              suffix: suffix,
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: color),
+            ),
             const SizedBox(height: 2),
             Text(label, style: const TextStyle(fontSize: 12, color: AppColors.muted, fontWeight: FontWeight.w600)),
           ],

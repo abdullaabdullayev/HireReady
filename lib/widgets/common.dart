@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import 'interactions.dart';
 
-/// A white rounded card with the standard soft shadow.
-class AppCard extends StatelessWidget {
+/// A white rounded card with the standard soft shadow. When [onTap] is set it
+/// adds a subtle press-scale + selection haptic (rest appearance unchanged).
+class AppCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
@@ -19,23 +21,48 @@ class AppCard extends StatelessWidget {
   });
 
   @override
+  State<AppCard> createState() => _AppCardState();
+}
+
+class _AppCardState extends State<AppCard> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (widget.onTap != null && _down != v) setState(() => _down = v);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
+    final card = Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: widget.onTap == null
+            ? null
+            : () {
+                HapticType.selection.fire();
+                widget.onTap!();
+              },
+        onHighlightChanged: _set,
         borderRadius: BorderRadius.circular(20),
         child: Ink(
-          padding: padding,
+          padding: widget.padding,
           decoration: BoxDecoration(
-            color: color ?? AppColors.surface,
+            color: widget.color ?? AppColors.surface,
             borderRadius: BorderRadius.circular(20),
             boxShadow: kCardShadow,
-            border: border,
+            border: widget.border,
           ),
-          child: child,
+          child: widget.child,
         ),
       ),
+    );
+
+    if (widget.onTap == null) return card;
+    return AnimatedScale(
+      scale: _down ? 0.97 : 1.0,
+      duration: const Duration(milliseconds: 110),
+      curve: Curves.easeOut,
+      child: card,
     );
   }
 }
@@ -226,7 +253,12 @@ class FlowBottomBar extends StatelessWidget {
       child: SafeArea(
         top: false,
         child: ElevatedButton(
-          onPressed: enabled ? onNext : null,
+          onPressed: enabled
+              ? () {
+                  HapticType.light.fire();
+                  onNext();
+                }
+              : null,
           style: ElevatedButton.styleFrom(
             disabledBackgroundColor: AppColors.line,
             disabledForegroundColor: AppColors.muted,
