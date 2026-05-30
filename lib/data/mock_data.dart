@@ -114,4 +114,55 @@ class MockData {
       keyPoints: ['Awareness of context', 'Adaptability', 'Concrete examples'],
     ),
   ];
+
+  /// Questions "extracted" from a custom questions file the user uploads in
+  /// the Set requirements step (mock).
+  static const List<Question> customFileBank = [
+    Question(
+      id: 'c1',
+      prompt: 'Explain the difference between optimistic and pessimistic locking, and when you would use each.',
+      category: 'Technical',
+      modelAnswer:
+          'Optimistic locking assumes conflicts are rare and validates at commit (version checks); pessimistic locking blocks others by acquiring locks up front. Use optimistic for low-contention/high-throughput, pessimistic for high-contention critical sections.',
+      keyPoints: ['Optimistic vs pessimistic', 'Contention trade-off', 'Concrete use case'],
+    ),
+    Question(
+      id: 'c2',
+      prompt: 'Describe a time you disagreed with a teammate on a technical decision. How was it resolved?',
+      category: 'Behavioral',
+      modelAnswer:
+          'Use STAR. Show that you listened, backed your view with data or a prototype, stayed respectful, and aligned on a shared decision and outcome.',
+      keyPoints: ['Healthy disagreement', 'Evidence-based', 'Resolution & outcome'],
+    ),
+    Question(
+      id: 'c3',
+      prompt: 'What happens, step by step, when you type a URL into the browser and press Enter?',
+      category: 'Technical',
+      modelAnswer:
+          'DNS resolution, TCP/TLS handshake, HTTP request, server response, then parsing HTML/CSS/JS, building the DOM/CSSOM, rendering and painting. Mention caching and CDNs.',
+      keyPoints: ['DNS & connection', 'Request/response', 'Render pipeline'],
+    ),
+    Question(
+      id: 'c4',
+      prompt: 'How do you prioritise tasks when everything feels urgent and the deadline is tight?',
+      category: 'Behavioral',
+      modelAnswer:
+          'Clarify impact vs effort, align with stakeholders on must-haves vs nice-to-haves, communicate trade-offs early, and protect focus on the highest-leverage work.',
+      keyPoints: ['Impact vs effort', 'Stakeholder alignment', 'Clear communication'],
+    ),
+    Question(
+      id: 'c5',
+      prompt: 'What is idempotency and why does it matter for API design?',
+      category: 'Technical',
+      options: [
+        'An operation that can only run once',
+        'An operation that produces the same result no matter how many times it is applied',
+        'An operation that always fails safely',
+        'An operation that requires authentication',
+      ],
+      correctIndex: 1,
+      modelAnswer:
+          'Idempotency means repeating a request yields the same result/state. It matters for safe retries on network failures (e.g., PUT/DELETE, idempotency keys for payments).',
+    ),
+  ];
 }
