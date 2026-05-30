@@ -5,8 +5,9 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'question_source_screen.dart';
 
-/// Step 3 — "Set requirements": use defaults or customise focus areas and
-/// optionally upload a questions file to extract questions from.
+/// Step 3 — "Set requirements": optionally upload a resume, then choose default
+/// or custom requirements. Under custom, the user can upload reference
+/// books/resources the AI uses to check answers and generate questions.
 class RequirementsScreen extends StatefulWidget {
   const RequirementsScreen({super.key});
 
@@ -19,17 +20,25 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
 
   static const _areas = ['Behavioral', 'Technical', 'System Design', 'Experience', 'Culture fit'];
 
-  void _uploadQuestionsFile() {
-    // Frontend-only mock of a file picker + question extraction.
-    const file = UploadedResource(name: 'Interview_Questions.pdf', type: 'PDF', size: '64 KB');
-    if (!AppState.instance.questionFiles.any((e) => e.name == file.name)) {
-      setState(() => AppState.instance.addQuestionFile(file));
-    }
+  void _uploadResume() {
+    const file = UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', size: '248 KB');
+    setState(() => AppState.instance.setResume(file));
+    _toast('Resume uploaded');
+  }
+
+  void _uploadReference() {
+    final n = AppState.instance.referenceMaterials.length + 1;
+    final file = UploadedResource(name: 'Reference_$n.pdf', type: 'PDF', size: '1.2 MB');
+    setState(() => AppState.instance.addReferenceMaterial(file));
+    _toast('Reference added — the AI will use it to check answers');
+  }
+
+  void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.accent,
-        content: Text('Extracted ${AppState.instance.customQuestions.length} questions from your file'),
+        content: Text(msg),
       ),
     );
   }
@@ -48,11 +57,36 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                 children: [
                   const StepDots(current: 3, total: 4),
                   const SizedBox(height: 20),
+
+                  // 1) Resume upload (optional, first)
+                  const SectionHeader('Your resume'),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Upload your resume so we can tailor questions and feedback to you. (Optional)',
+                    style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
+                  ),
+                  const SizedBox(height: 12),
+                  if (state.resume == null)
+                    UploadBox(
+                      title: 'Tap to upload resume',
+                      subtitle: 'PDF, DOCX • max 5 MB',
+                      icon: Icons.description_rounded,
+                      onTap: _uploadResume,
+                    )
+                  else
+                    FileRow(
+                      name: state.resume!.name,
+                      meta: '${state.resume!.type} • ${state.resume!.size}',
+                      badge: const TagPill(text: 'Uploaded', color: AppColors.success, icon: Icons.check_rounded),
+                      onRemove: () => setState(() => state.removeResume()),
+                    ),
+
+                  const SizedBox(height: 28),
+
+                  // 2) Requirement type
                   const Text('How should we tailor it?',
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
                   const SizedBox(height: 16),
-
-                  // Default vs Custom toggle cards
                   _choice(
                     title: 'Default requirements',
                     subtitle: 'A balanced mix for ${state.level.label} ${state.selectedRole?.title ?? "candidates"}.',
@@ -63,12 +97,13 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                   const SizedBox(height: 12),
                   _choice(
                     title: 'Custom requirements',
-                    subtitle: 'Choose focus areas or upload your own questions file.',
+                    subtitle: 'Choose focus areas and add reference materials.',
                     icon: Icons.tune_rounded,
                     selected: _custom,
                     onTap: () => setState(() => _custom = true),
                   ),
 
+                  // Custom panel: focus areas + reference materials
                   AnimatedCrossFade(
                     duration: const Duration(milliseconds: 250),
                     crossFadeState: _custom ? CrossFadeState.showFirst : CrossFadeState.showSecond,
@@ -105,17 +140,24 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                             }).toList(),
                           ),
                           const SizedBox(height: 26),
-                          const SectionHeader('Custom questions'),
+                          const SectionHeader('Reference materials'),
                           const SizedBox(height: 6),
                           const Text(
-                            'Upload a file and we\'ll extract interview questions from it. (Optional)',
+                            'Upload books or resources — the AI uses them to check your answers and generate questions. (Optional)',
                             style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
                           ),
                           const SizedBox(height: 12),
-                          if (state.questionFiles.isEmpty)
-                            GestureDetector(onTap: _uploadQuestionsFile, child: _uploadBox())
-                          else
-                            ...state.questionFiles.map((f) => _questionFileRow(f, state.customQuestions.length)),
+                          ...state.referenceMaterials.map((f) => FileRow(
+                                name: f.name,
+                                meta: '${f.type} • ${f.size}',
+                                onRemove: () => setState(() => state.removeReferenceMaterial(f)),
+                              )),
+                          UploadBox(
+                            title: 'Tap to upload a book or resource',
+                            subtitle: 'PDF, DOCX, EPUB • max 25 MB',
+                            icon: Icons.menu_book_rounded,
+                            onTap: _uploadReference,
+                          ),
                         ],
                       ),
                     ),
@@ -173,67 +215,6 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
           ),
           Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
               color: selected ? AppColors.primary : AppColors.line),
-        ],
-      ),
-    );
-  }
-
-  Widget _uploadBox() {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 26),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.note_add_rounded, color: AppColors.primary, size: 32),
-          SizedBox(height: 10),
-          Text('Tap to upload questions file',
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
-          SizedBox(height: 4),
-          Text('PDF, DOCX, TXT • max 5 MB', style: TextStyle(color: AppColors.muted, fontSize: 12)),
-        ],
-      ),
-    );
-  }
-
-  Widget _questionFileRow(UploadedResource f, int extracted) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(
-                color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.danger, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(f.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                const SizedBox(height: 2),
-                Text('${f.type} • ${f.size}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          TagPill(text: '$extracted questions', color: AppColors.accent, icon: Icons.check_rounded),
-          IconButton(
-            icon: const Icon(Icons.close_rounded, color: AppColors.muted, size: 20),
-            onPressed: () => setState(() => AppState.instance.removeQuestionFile(f)),
-          ),
         ],
       ),
     );

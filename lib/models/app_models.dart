@@ -18,7 +18,7 @@ extension ExperienceLevelX on ExperienceLevel {
 }
 
 /// Where the questions for a session come from.
-enum QuestionSource { resume, defaultBank }
+enum QuestionSource { system, customFile }
 
 /// A job role the user can practice for.
 class JobRole {

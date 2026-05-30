@@ -15,13 +15,20 @@ class AppState extends ChangeNotifier {
   // --- Session configuration being built ---
   JobRole? selectedRole;
   ExperienceLevel level = ExperienceLevel.mid;
-  QuestionSource source = QuestionSource.defaultBank;
-  final List<UploadedResource> resources = [];
+  QuestionSource source = QuestionSource.system;
   bool useCustomRequirements = false;
   final Set<String> focusAreas = {'Behavioral', 'Technical'};
 
-  /// Optional questions file(s) uploaded in "Set requirements". When present,
-  /// the session is built from the questions extracted from them (mock).
+  /// Resume uploaded in "Set requirements" (optional) — used by the AI to
+  /// tailor questions/feedback (mock).
+  UploadedResource? resume;
+
+  /// Reference books/resources uploaded under custom requirements (optional) —
+  /// the AI uses them to check answers and generate questions (mock).
+  final List<UploadedResource> referenceMaterials = [];
+
+  /// Custom questions file(s) uploaded in "Question source". When chosen, the
+  /// session is built from the questions extracted from them (mock).
   final List<UploadedResource> questionFiles = [];
   List<Question> customQuestions = [];
 
@@ -39,8 +46,9 @@ class AppState extends ChangeNotifier {
   void reset() {
     selectedRole = null;
     level = ExperienceLevel.mid;
-    source = QuestionSource.defaultBank;
-    resources.clear();
+    source = QuestionSource.system;
+    resume = null;
+    referenceMaterials.clear();
     useCustomRequirements = false;
     focusAreas
       ..clear()
@@ -61,14 +69,29 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void addResource(UploadedResource r) {
-    resources.add(r);
+  void setResume(UploadedResource r) {
+    resume = r;
+    notifyListeners();
+  }
+
+  void removeResume() {
+    resume = null;
+    notifyListeners();
+  }
+
+  void addReferenceMaterial(UploadedResource r) {
+    if (!referenceMaterials.any((e) => e.name == r.name)) referenceMaterials.add(r);
+    notifyListeners();
+  }
+
+  void removeReferenceMaterial(UploadedResource r) {
+    referenceMaterials.remove(r);
     notifyListeners();
   }
 
   /// Add an uploaded questions file and "extract" its questions (mock).
   void addQuestionFile(UploadedResource file) {
-    questionFiles.add(file);
+    if (!questionFiles.any((e) => e.name == file.name)) questionFiles.add(file);
     customQuestions = List<Question>.from(MockData.customFileBank);
     notifyListeners();
   }
@@ -79,14 +102,15 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Build the question list for the run. Questions extracted from an uploaded
-  /// file take precedence; otherwise we use the chosen source bank.
+  /// Build the question list for the run. When the user chose to upload a
+  /// custom questions file, use the questions extracted from it; otherwise use
+  /// the system question bank.
   void buildSession() {
     final List<Question> bank;
-    if (useCustomRequirements && customQuestions.isNotEmpty) {
+    if (source == QuestionSource.customFile && customQuestions.isNotEmpty) {
       bank = customQuestions;
     } else {
-      bank = source == QuestionSource.resume ? MockData.resumeBank : MockData.defaultBank;
+      bank = MockData.defaultBank;
     }
     _sessionQuestions = List<Question>.from(bank);
     answers.clear();
