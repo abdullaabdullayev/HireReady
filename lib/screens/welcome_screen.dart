@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/interactions.dart';
 import 'auth_screen.dart';
 
 /// Welcome screen with value props → Sign up / Log in.
@@ -55,6 +56,7 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   void _go(BuildContext context, {required bool startOnSignUp}) {
+    HapticType.light.fire();
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => AuthScreen(startOnSignUp: startOnSignUp)),
     );

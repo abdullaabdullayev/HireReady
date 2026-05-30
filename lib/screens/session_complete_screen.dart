@@ -2,13 +2,26 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../widgets/common.dart';
+import '../widgets/interactions.dart';
 import 'dashboard_screen.dart';
 import 'review_screen.dart';
 
 /// "Session complete" results screen with the post-session options from the
 /// flow: view analytics, review wrong questions, return to dashboard.
-class SessionCompleteScreen extends StatelessWidget {
+class SessionCompleteScreen extends StatefulWidget {
   const SessionCompleteScreen({super.key});
+
+  @override
+  State<SessionCompleteScreen> createState() => _SessionCompleteScreenState();
+}
+
+class _SessionCompleteScreenState extends State<SessionCompleteScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Celebratory tap as the results land.
+    WidgetsBinding.instance.addPostFrameCallback((_) => HapticType.success.fire());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +33,9 @@ class SessionCompleteScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Column(
+        child: Stack(
+          children: [
+            Column(
           children: [
             Expanded(
               child: ListView(
@@ -129,24 +144,34 @@ class SessionCompleteScreen extends StatelessWidget {
                   children: [
                     if (reviewCount > 0)
                       OutlinedButton.icon(
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const ReviewScreen()),
-                        ),
+                        onPressed: () {
+                          HapticType.light.fire();
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => const ReviewScreen()),
+                          );
+                        },
                         icon: const Icon(Icons.bookmark_rounded, color: AppColors.warning),
                         label: Text('Review $reviewCount question${reviewCount == 1 ? "" : "s"}'),
                       ),
                     if (reviewCount > 0) const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                        (route) => false,
-                      ),
+                      onPressed: () {
+                        HapticType.light.fire();
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                          (route) => false,
+                        );
+                      },
                       child: const Text('Back to dashboard'),
                     ),
                   ],
                 ),
               ),
             ),
+          ],
+        ),
+            // Confetti rains over the results — ephemeral, ignores taps.
+            const Positioned.fill(child: ConfettiBurst()),
           ],
         ),
       ),

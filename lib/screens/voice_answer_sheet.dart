@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../widgets/interactions.dart';
 
 /// UI-only voice answer capture. Shows a mic button, animated waveform and
 /// timer while "recording", then returns a mock transcript. No real audio is
@@ -28,6 +29,7 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
     if (_recording) {
       _stop();
     } else {
+      HapticType.medium.fire();
       setState(() {
         _recording = true;
         _seconds = 0;
@@ -41,6 +43,7 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
 
   void _stop() {
     _timer?.cancel();
+    HapticType.light.fire();
     setState(() {
       _recording = false;
       _done = true;
@@ -127,7 +130,10 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context, _mockTranscript),
+                    onPressed: () {
+                      HapticType.selection.fire();
+                      Navigator.pop(context, _mockTranscript);
+                    },
                     child: const Text('Use answer'),
                   ),
                 ),

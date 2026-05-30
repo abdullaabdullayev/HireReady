@@ -4,6 +4,7 @@ import '../state/app_state.dart';
 import '../data/mock_data.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
+import '../widgets/interactions.dart';
 import 'select_role_screen.dart';
 import 'progress_screen.dart';
 import 'profile_screen.dart';
@@ -35,7 +36,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: NavigationBar(
           selectedIndex: _index,
           height: 68,
-          onDestinationSelected: (i) => setState(() => _index = i),
+          onDestinationSelected: (i) {
+            HapticType.selection.fire();
+            setState(() => _index = i);
+          },
           destinations: const [
             NavigationDestination(icon: Icon(Icons.home_outlined), selectedIcon: Icon(Icons.home_rounded), label: 'Home'),
             NavigationDestination(icon: Icon(Icons.bar_chart_outlined), selectedIcon: Icon(Icons.bar_chart_rounded), label: 'Progress'),
@@ -85,19 +89,23 @@ class _HomeTab extends StatelessWidget {
         const SizedBox(height: 22),
 
         // Stats row
-        Row(
-          children: [
-            _stat('${state.sessionsCompleted}', 'Sessions', Icons.task_alt_rounded, AppColors.primary),
-            const SizedBox(width: 12),
-            _stat('${state.questionsAnswered}', 'Answered', Icons.quiz_rounded, AppColors.info),
-            const SizedBox(width: 12),
-            _stat('${state.dayStreak}🔥', 'Day streak', Icons.local_fire_department_rounded, AppColors.warning),
-          ],
+        FadeSlideIn(
+          delay: const Duration(milliseconds: 60),
+          child: Row(
+            children: [
+              _stat(state.sessionsCompleted, 'Sessions', Icons.task_alt_rounded, AppColors.primary),
+              const SizedBox(width: 12),
+              _stat(state.questionsAnswered, 'Answered', Icons.quiz_rounded, AppColors.info),
+              const SizedBox(width: 12),
+              _stat(state.dayStreak, 'Day streak', Icons.local_fire_department_rounded, AppColors.warning,
+                  suffix: '🔥'),
+            ],
+          ),
         ),
         const SizedBox(height: 20),
 
         // Primary CTA — "Start new session?" in the flow
-        _StartSessionCard(),
+        const FadeSlideIn(delay: Duration(milliseconds: 120), child: _StartSessionCard()),
         const SizedBox(height: 24),
 
         const SectionHeader('Popular roles'),
@@ -151,7 +159,7 @@ class _HomeTab extends StatelessWidget {
     );
   }
 
-  Widget _stat(String value, String label, IconData icon, Color color) {
+  Widget _stat(int value, String label, IconData icon, Color color, {String suffix = ''}) {
     return Expanded(
       child: AppCard(
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -159,7 +167,11 @@ class _HomeTab extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 22),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+            AnimatedCounter(
+              value: value,
+              suffix: suffix,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800),
+            ),
             const SizedBox(height: 2),
             Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.muted, fontWeight: FontWeight.w600)),
           ],
@@ -170,9 +182,12 @@ class _HomeTab extends StatelessWidget {
 }
 
 class _StartSessionCard extends StatelessWidget {
+  const _StartSessionCard();
+
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
+      haptic: HapticType.light,
       onTap: () {
         AppState.instance.reset();
         Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SelectRoleScreen()));
@@ -226,7 +241,7 @@ class _RoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return Pressable(
       onTap: onTap,
       child: Container(
         width: 130,

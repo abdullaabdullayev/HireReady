@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
+import '../widgets/interactions.dart';
 import 'voice_answer_sheet.dart';
 import 'session_complete_screen.dart';
 
@@ -57,6 +58,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       _record = record;
       _phase = _Phase.result;
     });
+    (record.isCorrect ? HapticType.success : HapticType.error).fire();
   }
 
   void _next() {
@@ -103,37 +105,44 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: (_index + (_phase == _Phase.result ? 1 : 0)) / _total,
-                  minHeight: 7,
-                  backgroundColor: AppColors.line,
-                  valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+            Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: (_index + (_phase == _Phase.result ? 1 : 0)) / _total,
+                      minHeight: 7,
+                      backgroundColor: AppColors.line,
+                      valueColor: const AlwaysStoppedAnimation(AppColors.primary),
+                    ),
+                  ),
                 ),
-              ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    child: _phase == _Phase.evaluating
+                        ? const _Evaluating()
+                        : ListView(
+                            key: ValueKey('$_index-$_phase'),
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                            children: [
+                              _questionCard(),
+                              const SizedBox(height: 20),
+                              if (_phase == _Phase.answering) _answerArea() else _resultArea(),
+                            ],
+                          ),
+                  ),
+                ),
+                if (_phase != _Phase.evaluating) _bottomAction(),
+              ],
             ),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 250),
-                child: _phase == _Phase.evaluating
-                    ? const _Evaluating()
-                    : ListView(
-                        key: ValueKey('$_index-$_phase'),
-                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-                        children: [
-                          _questionCard(),
-                          const SizedBox(height: 20),
-                          if (_phase == _Phase.answering) _answerArea() else _resultArea(),
-                        ],
-                      ),
-              ),
-            ),
-            if (_phase != _Phase.evaluating) _bottomAction(),
+            // Celebrate a high score on this question.
+            if (_phase == _Phase.result && (_record?.score ?? 0) >= 80)
+              Positioned.fill(child: ConfettiBurst(key: ValueKey('confetti-$_index'))),
           ],
         ),
       ),
@@ -340,7 +349,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
               Switch(
                 value: r.markedForReview,
                 activeThumbColor: AppColors.warning,
-                onChanged: (v) => setState(() => r.markedForReview = v),
+                onChanged: (v) {
+                  HapticType.selection.fire();
+                  setState(() => r.markedForReview = v);
+                },
               ),
             ],
           ),
@@ -386,7 +398,17 @@ class _PracticeScreenState extends State<PracticeScreen> {
       child: SafeArea(
         top: false,
         child: ElevatedButton(
-          onPressed: isResult ? _next : (_canSubmit ? _submit : null),
+          onPressed: isResult
+              ? () {
+                  HapticType.light.fire();
+                  _next();
+                }
+              : (_canSubmit
+                  ? () {
+                      HapticType.light.fire();
+                      _submit();
+                    }
+                  : null),
           style: ElevatedButton.styleFrom(
             disabledBackgroundColor: AppColors.line,
             disabledForegroundColor: AppColors.muted,
