@@ -1,39 +1,56 @@
-# Gradle
-.gradle/
+HELP.md
+.gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
 
-# IntelliJ IDEA
-.idea/
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
 *.iws
 *.iml
 *.ipr
 out/
+!**/src/main/**/out/
+!**/src/test/**/out/
 
-# Eclipse / STS
-.apt_generated/
-.classpath
-.factorypath
-.project
-.settings/
-.springBeans
-.sts4-cache/
-bin/
-
-# NetBeans
+### NetBeans ###
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
 
-# VS Code
+### VS Code ###
 .vscode/
 
-# App-specific
-uploads/
+### HireReady ###
+# Local config & secrets — never commit
 application-local.yml
 application-local.properties
+application-secret.yml
+.env
+*.env
+
+# Locally stored user uploads (resumes, reference docs, audio)
+uploads/
+
+# Logs
 *.log
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
