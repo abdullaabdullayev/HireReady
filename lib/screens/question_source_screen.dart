@@ -5,8 +5,8 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'practice_screen.dart';
 
-/// Step 4 — choose where questions come from: an uploaded resume (tailored)
-/// or the default question bank.
+/// Step 4 — choose where questions come from: the system's question bank, or a
+/// custom questions file the user uploads (we extract questions from it).
 class QuestionSourceScreen extends StatefulWidget {
   const QuestionSourceScreen({super.key});
 
@@ -17,17 +17,14 @@ class QuestionSourceScreen extends StatefulWidget {
 class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
   QuestionSource _source = AppState.instance.source;
 
-  void _mockUpload() {
-    // Simulate a file picker result — no real I/O.
-    const r = UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', size: '248 KB');
-    if (!AppState.instance.resources.any((e) => e.name == r.name)) {
-      setState(() => AppState.instance.addResource(r));
-    }
+  void _uploadQuestionsFile() {
+    const file = UploadedResource(name: 'Interview_Questions.pdf', type: 'PDF', size: '64 KB');
+    setState(() => AppState.instance.addQuestionFile(file));
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         behavior: SnackBarBehavior.floating,
         backgroundColor: AppColors.accent,
-        content: Text('Resume uploaded — generating tailored questions'),
+        content: Text('Extracted ${AppState.instance.customQuestions.length} questions from your file'),
       ),
     );
   }
@@ -51,37 +48,48 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
                   const SizedBox(height: 16),
 
                   _sourceCard(
-                    source: QuestionSource.resume,
-                    title: 'From my resume',
-                    subtitle: 'Upload your resume — we generate questions tailored to your experience.',
-                    icon: Icons.description_rounded,
-                  ),
-                  const SizedBox(height: 12),
-                  _sourceCard(
-                    source: QuestionSource.defaultBank,
-                    title: 'Default question bank',
+                    source: QuestionSource.system,
+                    title: 'Questions from the system',
                     subtitle: 'Curated ${state.selectedRole?.title ?? "role"} questions for ${state.level.label} level.',
                     icon: Icons.library_books_rounded,
                   ),
+                  const SizedBox(height: 12),
+                  _sourceCard(
+                    source: QuestionSource.customFile,
+                    title: 'Upload custom questions file',
+                    subtitle: 'We extract the interview questions from your file.',
+                    icon: Icons.note_add_rounded,
+                  ),
 
-                  // Upload area only relevant for the resume source.
+                  // Upload area only relevant for the custom-file source.
                   AnimatedCrossFade(
                     duration: const Duration(milliseconds: 250),
                     crossFadeState:
-                        _source == QuestionSource.resume ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                        _source == QuestionSource.customFile ? CrossFadeState.showFirst : CrossFadeState.showSecond,
                     firstChild: Padding(
                       padding: const EdgeInsets.only(top: 22),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionHeader('Your documents'),
+                          const SectionHeader('Your questions file'),
                           const SizedBox(height: 12),
-                          GestureDetector(
-                            onTap: _mockUpload,
-                            child: DottedUploadBox(),
-                          ),
-                          const SizedBox(height: 12),
-                          ...state.resources.map((r) => _fileRow(r)),
+                          ...state.questionFiles.map((f) => FileRow(
+                                name: f.name,
+                                meta: '${f.type} • ${f.size}',
+                                badge: TagPill(
+                                  text: '${state.customQuestions.length} questions',
+                                  color: AppColors.accent,
+                                  icon: Icons.check_rounded,
+                                ),
+                                onRemove: () => setState(() => state.removeQuestionFile(f)),
+                              )),
+                          if (state.questionFiles.isEmpty)
+                            UploadBox(
+                              title: 'Tap to upload questions file',
+                              subtitle: 'PDF, DOCX, TXT • max 5 MB',
+                              icon: Icons.note_add_rounded,
+                              onTap: _uploadQuestionsFile,
+                            ),
                         ],
                       ),
                     ),
@@ -92,7 +100,7 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
             ),
             FlowBottomBar(
               label: 'Start practice',
-              enabled: _source == QuestionSource.defaultBank || state.resources.isNotEmpty,
+              enabled: _source == QuestionSource.system || state.questionFiles.isNotEmpty,
               onNext: () {
                 state.source = _source;
                 state.buildSession();
@@ -141,66 +149,6 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
           ),
           Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
               color: selected ? AppColors.primary : AppColors.line),
-        ],
-      ),
-    );
-  }
-
-  Widget _fileRow(UploadedResource r) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.line, width: 1.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            height: 40,
-            width: 40,
-            decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-            child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.danger, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(r.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                Text('${r.type} • ${r.size}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
-              ],
-            ),
-          ),
-          const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 22),
-        ],
-      ),
-    );
-  }
-}
-
-/// Dashed-border upload drop zone.
-class DottedUploadBox extends StatelessWidget {
-  const DottedUploadBox({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 28),
-      decoration: BoxDecoration(
-        color: AppColors.primarySoft.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-      ),
-      child: const Column(
-        children: [
-          Icon(Icons.cloud_upload_rounded, color: AppColors.primary, size: 34),
-          SizedBox(height: 10),
-          Text('Tap to upload resume', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
-          SizedBox(height: 4),
-          Text('PDF, DOCX • max 5 MB', style: TextStyle(color: AppColors.muted, fontSize: 12)),
         ],
       ),
     );

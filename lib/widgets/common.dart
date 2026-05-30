@@ -235,6 +235,98 @@ class ScoreRing extends StatelessWidget {
   }
 }
 
+/// Dashed-border upload drop zone, reused across the setup flow.
+class UploadBox extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const UploadBox({
+    super.key,
+    required this.title,
+    this.subtitle = 'PDF, DOCX, TXT • max 5 MB',
+    this.icon = Icons.cloud_upload_rounded,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 26),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: AppColors.primary, size: 32),
+            const SizedBox(height: 10),
+            Text(title, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+            const SizedBox(height: 4),
+            Text(subtitle, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A row showing an uploaded file with an optional trailing badge / remove.
+class FileRow extends StatelessWidget {
+  final String name;
+  final String meta;
+  final Widget? badge;
+  final VoidCallback? onRemove;
+
+  const FileRow({super.key, required this.name, required this.meta, this.badge, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.danger, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text(meta, style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          if (badge != null) badge!,
+          if (onRemove != null)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: AppColors.muted, size: 20),
+              onPressed: onRemove,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Sticky bottom action bar used across the setup flow.
 class FlowBottomBar extends StatelessWidget {
   final bool enabled;
