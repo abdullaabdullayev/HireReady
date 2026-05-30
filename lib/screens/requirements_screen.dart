@@ -5,7 +5,8 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'question_source_screen.dart';
 
-/// Step 3 — "Set requirements": use defaults or customise focus areas & count.
+/// Step 3 — "Set requirements": use defaults or customise focus areas and
+/// optionally upload a questions file to extract questions from.
 class RequirementsScreen extends StatefulWidget {
   const RequirementsScreen({super.key});
 
@@ -15,9 +16,23 @@ class RequirementsScreen extends StatefulWidget {
 
 class _RequirementsScreenState extends State<RequirementsScreen> {
   late bool _custom = AppState.instance.useCustomRequirements;
-  double _count = 6;
 
   static const _areas = ['Behavioral', 'Technical', 'System Design', 'Experience', 'Culture fit'];
+
+  void _uploadQuestionsFile() {
+    // Frontend-only mock of a file picker + question extraction.
+    const file = UploadedResource(name: 'Interview_Questions.pdf', type: 'PDF', size: '64 KB');
+    if (!AppState.instance.questionFiles.any((e) => e.name == file.name)) {
+      setState(() => AppState.instance.addQuestionFile(file));
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.accent,
+        content: Text('Extracted ${AppState.instance.customQuestions.length} questions from your file'),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +63,7 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                   const SizedBox(height: 12),
                   _choice(
                     title: 'Custom requirements',
-                    subtitle: 'Choose focus areas and how many questions.',
+                    subtitle: 'Choose focus areas or upload your own questions file.',
                     icon: Icons.tune_rounded,
                     selected: _custom,
                     onTap: () => setState(() => _custom = true),
@@ -89,17 +104,18 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                               );
                             }).toList(),
                           ),
-                          const SizedBox(height: 24),
-                          SectionHeader('Number of questions',
-                              trailing: TagPill(text: '${_count.round()}', icon: Icons.numbers_rounded)),
-                          Slider(
-                            value: _count,
-                            min: 3,
-                            max: 10,
-                            divisions: 7,
-                            label: '${_count.round()}',
-                            onChanged: (v) => setState(() => _count = v),
+                          const SizedBox(height: 26),
+                          const SectionHeader('Custom questions'),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'Upload a file and we\'ll extract interview questions from it. (Optional)',
+                            style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
                           ),
+                          const SizedBox(height: 12),
+                          if (state.questionFiles.isEmpty)
+                            GestureDetector(onTap: _uploadQuestionsFile, child: _uploadBox())
+                          else
+                            ...state.questionFiles.map((f) => _questionFileRow(f, state.customQuestions.length)),
                         ],
                       ),
                     ),
@@ -157,6 +173,67 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
           ),
           Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
               color: selected ? AppColors.primary : AppColors.line),
+        ],
+      ),
+    );
+  }
+
+  Widget _uploadBox() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 26),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: const Column(
+        children: [
+          Icon(Icons.note_add_rounded, color: AppColors.primary, size: 32),
+          SizedBox(height: 10),
+          Text('Tap to upload questions file',
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
+          SizedBox(height: 4),
+          Text('PDF, DOCX, TXT • max 5 MB', style: TextStyle(color: AppColors.muted, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _questionFileRow(UploadedResource f, int extracted) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.line, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            height: 40,
+            width: 40,
+            decoration: BoxDecoration(
+                color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.danger, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(f.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
+                const SizedBox(height: 2),
+                Text('${f.type} • ${f.size}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          TagPill(text: '$extracted questions', color: AppColors.accent, icon: Icons.check_rounded),
+          IconButton(
+            icon: const Icon(Icons.close_rounded, color: AppColors.muted, size: 20),
+            onPressed: () => setState(() => AppState.instance.removeQuestionFile(f)),
+          ),
         ],
       ),
     );

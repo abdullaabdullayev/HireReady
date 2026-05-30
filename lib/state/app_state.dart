@@ -20,6 +20,11 @@ class AppState extends ChangeNotifier {
   bool useCustomRequirements = false;
   final Set<String> focusAreas = {'Behavioral', 'Technical'};
 
+  /// Optional questions file(s) uploaded in "Set requirements". When present,
+  /// the session is built from the questions extracted from them (mock).
+  final List<UploadedResource> questionFiles = [];
+  List<Question> customQuestions = [];
+
   // --- Active practice run ---
   List<Question> _sessionQuestions = [];
   final List<AnswerRecord> answers = [];
@@ -40,6 +45,8 @@ class AppState extends ChangeNotifier {
     focusAreas
       ..clear()
       ..addAll({'Behavioral', 'Technical'});
+    questionFiles.clear();
+    customQuestions = [];
     _sessionQuestions = [];
     answers.clear();
     notifyListeners();
@@ -59,9 +66,28 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Build the question list for the run based on chosen source.
+  /// Add an uploaded questions file and "extract" its questions (mock).
+  void addQuestionFile(UploadedResource file) {
+    questionFiles.add(file);
+    customQuestions = List<Question>.from(MockData.customFileBank);
+    notifyListeners();
+  }
+
+  void removeQuestionFile(UploadedResource file) {
+    questionFiles.remove(file);
+    if (questionFiles.isEmpty) customQuestions = [];
+    notifyListeners();
+  }
+
+  /// Build the question list for the run. Questions extracted from an uploaded
+  /// file take precedence; otherwise we use the chosen source bank.
   void buildSession() {
-    final bank = source == QuestionSource.resume ? MockData.resumeBank : MockData.defaultBank;
+    final List<Question> bank;
+    if (useCustomRequirements && customQuestions.isNotEmpty) {
+      bank = customQuestions;
+    } else {
+      bank = source == QuestionSource.resume ? MockData.resumeBank : MockData.defaultBank;
+    }
     _sessionQuestions = List<Question>.from(bank);
     answers.clear();
     notifyListeners();
