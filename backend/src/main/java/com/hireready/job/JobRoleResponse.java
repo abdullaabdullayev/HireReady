@@ -1,4 +1,4 @@
-package com.hireready.role;
+package com.hireready.job;
 
 public record JobRoleResponse(
         String id,

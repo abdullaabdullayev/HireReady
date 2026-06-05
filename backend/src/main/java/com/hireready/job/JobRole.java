@@ -1,4 +1,4 @@
-package com.hireready.role;
+package com.hireready.job;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;

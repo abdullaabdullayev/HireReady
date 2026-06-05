@@ -1,4 +1,4 @@
-package com.hireready.role;
+package com.hireready.job;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
