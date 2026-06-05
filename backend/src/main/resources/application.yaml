@@ -23,3 +23,9 @@ spring:
 jwt:
   secret: cokgizlisecretkeyburayayaz123456789
   expiration: 86400000
+
+ai:
+  gemini:
+    api-key: AQ.Ab8RN6Jf8MaHTGzLHsJ4hrPVwfmjcF8uzUq5lkjdTFFOTc_27g
+    base-url: https://generativelanguage.googleapis.com/v1beta
+    model: gemini-2.0-flash
