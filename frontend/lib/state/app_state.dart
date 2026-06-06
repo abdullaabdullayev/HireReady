@@ -148,17 +148,19 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Build the question list for the run. When the user chose to upload a
-  /// custom questions file, use the questions extracted from it; otherwise use
-  /// the system question bank.
+  /// Build the question list for the run. The source is decided automatically:
+  /// if the user uploaded a questions file we could read, use those questions;
+  /// otherwise fall back to the system question bank. No manual toggle needed.
   void buildSession() {
-    final List<Question> bank;
-    if (source == QuestionSource.customFile && customQuestions.isNotEmpty) {
-      bank = customQuestions;
-    } else {
-      bank = MockData.defaultBank;
-    }
-    _sessionQuestions = List<Question>.from(bank);
+    final bool hasCustom = questionFiles.isNotEmpty && customQuestions.isNotEmpty;
+    source = hasCustom ? QuestionSource.customFile : QuestionSource.system;
+    // Custom requirements are implied by any optional customization the user did.
+    useCustomRequirements = referenceMaterials.isNotEmpty ||
+        resume != null ||
+        focusAreas.length != 2; // touched away from the default pair
+
+    _sessionQuestions =
+        List<Question>.from(hasCustom ? customQuestions : MockData.defaultBank);
     answers.clear();
     notifyListeners();
   }

@@ -3,7 +3,7 @@ import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
-import 'requirements_screen.dart';
+import 'session_setup_screen.dart';
 
 /// Step 2 — pick the experience level.
 class SelectLevelScreen extends StatefulWidget {
@@ -28,7 +28,7 @@ class _SelectLevelScreenState extends State<SelectLevelScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const StepDots(current: 2, total: 4),
+                  const StepDots(current: 2, total: 3),
                   const SizedBox(height: 20),
                   Text('How senior is the ${AppState.instance.selectedRole?.title ?? "role"}?',
                       style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, height: 1.2)),
@@ -93,7 +93,7 @@ class _SelectLevelScreenState extends State<SelectLevelScreen> {
               onNext: () {
                 AppState.instance.level = _level;
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RequirementsScreen()),
+                  MaterialPageRoute(builder: (_) => const SessionSetupScreen()),
                 );
               },
             ),
