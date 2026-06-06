@@ -1,5 +1,6 @@
 package com.hireready.user;
 
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -11,14 +12,22 @@ import java.util.List;
 
 @RequiredArgsConstructor
 public class CustomUserDetails implements UserDetails{
+
+        @Getter
+        private final Long userId;
+
+        @Getter
+        private final String name;
+
+        @Getter
         private final String email;
         private final String passwordHash;
         private final String role;
 
-
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-       return List.of(new SimpleGrantedAuthority(role));
+
+        return List.of(new SimpleGrantedAuthority(role));
     }
 
     @Override
