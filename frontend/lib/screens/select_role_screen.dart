@@ -42,7 +42,7 @@ class _SelectRoleScreenState extends State<SelectRoleScreen> {
               padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
               child: Column(
                 children: [
-                  const StepDots(current: 1, total: 4),
+                  const StepDots(current: 1, total: 3),
                   const SizedBox(height: 18),
                   TextField(
                     onChanged: (v) => setState(() => _query = v),
