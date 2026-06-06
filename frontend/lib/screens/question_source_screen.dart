@@ -1,7 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../models/app_models.dart';
+import '../services/document_service.dart';
 import '../widgets/common.dart';
 import 'practice_screen.dart';
 
@@ -16,17 +18,59 @@ class QuestionSourceScreen extends StatefulWidget {
 
 class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
   QuestionSource _source = AppState.instance.source;
+  bool _uploading = false;
 
-  void _uploadQuestionsFile() {
-    const file = UploadedResource(name: 'Interview_Questions.pdf', type: 'PDF', size: '64 KB');
-    setState(() => AppState.instance.addQuestionFile(file));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.accent,
-        content: Text('Extracted ${AppState.instance.customQuestions.length} questions from your file'),
-      ),
+  Future<void> _uploadQuestionsFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx', 'txt'],
+      withData: false,
     );
+    final picked = result?.files.single;
+    if (picked == null || picked.path == null) return;
+
+    setState(() => _uploading = true);
+    try {
+      final doc = await DocumentService.upload(
+        filePath: picked.path!,
+        fileName: picked.name,
+        type: 'QUESTIONS',
+      );
+      if (!mounted) return;
+      setState(() => AppState.instance.addQuestionFile(doc));
+
+      final ok = doc.extractionStatus == 'DONE';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: ok ? AppColors.accent : AppColors.danger,
+          content: Text(ok
+              ? 'Questions extracted from your file'
+              : 'Could not read questions from this file'),
+        ),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: AppColors.danger,
+            content: Text(friendlyError(e)),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploading = false);
+    }
+  }
+
+  Future<void> _removeQuestionFile(UploadedResource f) async {
+    setState(() => AppState.instance.removeQuestionFile(f));
+    if (f.id != null) {
+      try {
+        await DocumentService.delete(f.id!);
+      } catch (_) {}
+    }
   }
 
   @override
@@ -75,15 +119,17 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
                           const SizedBox(height: 12),
                           ...state.questionFiles.map((f) => FileRow(
                                 name: f.name,
-                                meta: '${f.type} • ${f.size}',
+                                meta: f.size,
                                 badge: TagPill(
-                                  text: '${state.customQuestions.length} questions',
-                                  color: AppColors.accent,
-                                  icon: Icons.check_rounded,
+                                  text: f.extractionStatus == 'DONE' ? 'Extracted' : 'No questions',
+                                  color: f.extractionStatus == 'DONE' ? AppColors.accent : AppColors.warning,
+                                  icon: f.extractionStatus == 'DONE' ? Icons.check_rounded : Icons.warning_amber_rounded,
                                 ),
-                                onRemove: () => setState(() => state.removeQuestionFile(f)),
+                                onRemove: () => _removeQuestionFile(f),
                               )),
-                          if (state.questionFiles.isEmpty)
+                          if (_uploading)
+                            const _UploadingBox()
+                          else if (state.questionFiles.isEmpty)
                             UploadBox(
                               title: 'Tap to upload questions file',
                               subtitle: 'PDF, DOCX, TXT • max 5 MB',
@@ -100,7 +146,9 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
             ),
             FlowBottomBar(
               label: 'Start practice',
-              enabled: _source == QuestionSource.system || state.questionFiles.isNotEmpty,
+              // System source is always ready; custom-file source needs a file
+              // whose questions were successfully extracted.
+              enabled: _source == QuestionSource.system || state.customQuestions.isNotEmpty,
               onNext: () {
                 state.source = _source;
                 state.buildSession();
@@ -149,6 +197,35 @@ class _QuestionSourceScreenState extends State<QuestionSourceScreen> {
           ),
           Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
               color: selected ? AppColors.primary : AppColors.line),
+        ],
+      ),
+    );
+  }
+}
+
+/// Loading box shown while the questions file uploads + extracts.
+class _UploadingBox extends StatelessWidget {
+  const _UploadingBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 26),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: const Column(
+        children: [
+          SizedBox(
+            height: 28, width: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.primary),
+          ),
+          SizedBox(height: 12),
+          Text('Uploading & extracting…',
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
         ],
       ),
     );

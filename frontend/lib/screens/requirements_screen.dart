@@ -1,7 +1,9 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../models/app_models.dart';
+import '../services/document_service.dart';
 import '../widgets/common.dart';
 import 'question_source_screen.dart';
 
@@ -17,27 +19,87 @@ class RequirementsScreen extends StatefulWidget {
 
 class _RequirementsScreenState extends State<RequirementsScreen> {
   late bool _custom = AppState.instance.useCustomRequirements;
+  bool _uploadingResume = false;
+  bool _uploadingReference = false;
 
   static const _areas = ['Behavioral', 'Technical', 'System Design', 'Experience', 'Culture fit'];
 
-  void _uploadResume() {
-    const file = UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', size: '248 KB');
-    setState(() => AppState.instance.setResume(file));
-    _toast('Resume uploaded');
+  /// Opens the system picker and returns the chosen file, or null if cancelled.
+  Future<PlatformFile?> _pickFile() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'docx', 'txt'],
+      withData: false, // we use the file path
+    );
+    return result?.files.single;
   }
 
-  void _uploadReference() {
-    final n = AppState.instance.referenceMaterials.length + 1;
-    final file = UploadedResource(name: 'Reference_$n.pdf', type: 'PDF', size: '1.2 MB');
-    setState(() => AppState.instance.addReferenceMaterial(file));
-    _toast('Reference added — the AI will use it to check answers');
+  Future<void> _uploadResume() async {
+    final picked = await _pickFile();
+    if (picked == null || picked.path == null) return;
+
+    setState(() => _uploadingResume = true);
+    try {
+      final doc = await DocumentService.upload(
+        filePath: picked.path!,
+        fileName: picked.name,
+        type: 'RESUME',
+      );
+      if (!mounted) return;
+      setState(() => AppState.instance.setResume(doc));
+      _toast('Resume uploaded', error: false);
+    } catch (e) {
+      _toast(friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _uploadingResume = false);
+    }
   }
 
-  void _toast(String msg) {
+  Future<void> _uploadReference() async {
+    final picked = await _pickFile();
+    if (picked == null || picked.path == null) return;
+
+    setState(() => _uploadingReference = true);
+    try {
+      final doc = await DocumentService.upload(
+        filePath: picked.path!,
+        fileName: picked.name,
+        type: 'REFERENCE',
+      );
+      if (!mounted) return;
+      setState(() => AppState.instance.addReferenceMaterial(doc));
+      _toast('Reference added — the AI will use it to check answers', error: false);
+    } catch (e) {
+      _toast(friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _uploadingReference = false);
+    }
+  }
+
+  Future<void> _removeResume() async {
+    final r = AppState.instance.resume;
+    setState(() => AppState.instance.removeResume());
+    if (r?.id != null) {
+      try {
+        await DocumentService.delete(r!.id!);
+      } catch (_) {/* already removed locally */}
+    }
+  }
+
+  Future<void> _removeReference(UploadedResource r) async {
+    setState(() => AppState.instance.removeReferenceMaterial(r));
+    if (r.id != null) {
+      try {
+        await DocumentService.delete(r.id!);
+      } catch (_) {}
+    }
+  }
+
+  void _toast(String msg, {bool error = true}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         behavior: SnackBarBehavior.floating,
-        backgroundColor: AppColors.accent,
+        backgroundColor: error ? AppColors.danger : AppColors.accent,
         content: Text(msg),
       ),
     );
@@ -66,7 +128,9 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                     style: TextStyle(color: AppColors.muted, fontSize: 13, height: 1.35),
                   ),
                   const SizedBox(height: 12),
-                  if (state.resume == null)
+                  if (_uploadingResume)
+                    const _UploadingBox(label: 'Uploading resume…')
+                  else if (state.resume == null)
                     UploadBox(
                       title: 'Tap to upload resume',
                       subtitle: 'PDF, DOCX • max 5 MB',
@@ -76,9 +140,9 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                   else
                     FileRow(
                       name: state.resume!.name,
-                      meta: '${state.resume!.type} • ${state.resume!.size}',
+                      meta: state.resume!.size,
                       badge: const TagPill(text: 'Uploaded', color: AppColors.success, icon: Icons.check_rounded),
-                      onRemove: () => setState(() => state.removeResume()),
+                      onRemove: _removeResume,
                     ),
 
                   const SizedBox(height: 28),
@@ -149,15 +213,18 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
                           const SizedBox(height: 12),
                           ...state.referenceMaterials.map((f) => FileRow(
                                 name: f.name,
-                                meta: '${f.type} • ${f.size}',
-                                onRemove: () => setState(() => state.removeReferenceMaterial(f)),
+                                meta: f.size,
+                                onRemove: () => _removeReference(f),
                               )),
-                          UploadBox(
-                            title: 'Tap to upload a book or resource',
-                            subtitle: 'PDF, DOCX, EPUB • max 25 MB',
-                            icon: Icons.menu_book_rounded,
-                            onTap: _uploadReference,
-                          ),
+                          if (_uploadingReference)
+                            const _UploadingBox(label: 'Uploading…')
+                          else
+                            UploadBox(
+                              title: 'Tap to upload a book or resource',
+                              subtitle: 'PDF, DOCX, TXT • max 25 MB',
+                              icon: Icons.menu_book_rounded,
+                              onTap: _uploadReference,
+                            ),
                         ],
                       ),
                     ),
@@ -215,6 +282,35 @@ class _RequirementsScreenState extends State<RequirementsScreen> {
           ),
           Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded,
               color: selected ? AppColors.primary : AppColors.line),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shown in place of an UploadBox while a file is being uploaded.
+class _UploadingBox extends StatelessWidget {
+  final String label;
+  const _UploadingBox({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 26),
+      decoration: BoxDecoration(
+        color: AppColors.primarySoft.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(
+            height: 28, width: 28,
+            child: CircularProgressIndicator(strokeWidth: 2.6, color: AppColors.primary),
+          ),
+          const SizedBox(height: 12),
+          Text(label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primary)),
         ],
       ),
     );

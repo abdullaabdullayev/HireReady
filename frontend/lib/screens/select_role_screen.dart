@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
-import '../data/mock_data.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'select_level_screen.dart';
@@ -29,7 +28,8 @@ class _SelectRoleScreenState extends State<SelectRoleScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final roles = MockData.roles
+    final state = AppState.instance;
+    final roles = state.roles
         .where((r) => r.title.toLowerCase().contains(_query.toLowerCase()))
         .toList();
 

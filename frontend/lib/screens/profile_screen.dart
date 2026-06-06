@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../state/app_state.dart';
 import '../data/mock_data.dart';
 import '../widgets/common.dart';
+import '../services/auth_service.dart';
 import 'welcome_screen.dart';
 
 /// Profile / settings tab (UI only).
@@ -97,10 +98,14 @@ class ProfileScreen extends StatelessWidget {
         const SizedBox(height: 20),
 
         OutlinedButton.icon(
-          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
-            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
-            (route) => false,
-          ),
+          onPressed: () async {
+            await AuthService.logout();
+            if (!context.mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+              (route) => false,
+            );
+          },
           icon: const Icon(Icons.logout_rounded, color: AppColors.danger),
           label: const Text('Log out', style: TextStyle(color: AppColors.danger)),
           style: OutlinedButton.styleFrom(side: const BorderSide(color: AppColors.line, width: 1.5)),

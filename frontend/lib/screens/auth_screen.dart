@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/interactions.dart';
+import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 
-/// Combined Sign up / Log in screen (UI only — no real auth).
+/// Combined Sign up / Log in screen, wired to the backend /api/auth endpoints.
 class AuthScreen extends StatefulWidget {
   final bool startOnSignUp;
   const AuthScreen({super.key, required this.startOnSignUp});
@@ -15,6 +16,87 @@ class AuthScreen extends StatefulWidget {
 class _AuthScreenState extends State<AuthScreen> {
   late bool _signUp = widget.startOnSignUp;
   bool _obscure = true;
+  bool _loading = false;
+
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  /// Returns an error string if invalid, otherwise null.
+  String? _validate() {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final pass = _passwordController.text;
+
+    if (_signUp && name.isEmpty) return 'Please enter your full name';
+    if (email.isEmpty) return 'Please enter your email';
+    final emailOk = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    if (!emailOk) return 'Please enter a valid email';
+    if (pass.isEmpty) return 'Please enter your password';
+    if (_signUp && pass.length < 6) return 'Password must be at least 6 characters';
+    return null;
+  }
+
+  void _toast(String msg, {bool error = true}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: error ? AppColors.danger : AppColors.accent,
+        content: Text(msg),
+      ),
+    );
+  }
+
+  Future<void> _submit() async {
+    HapticType.light.fire();
+    FocusScope.of(context).unfocus();
+
+    final validationError = _validate();
+    if (validationError != null) {
+      _toast(validationError);
+      return;
+    }
+
+    setState(() => _loading = true);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    String? error;
+    if (_signUp) {
+      // Register, then log in to obtain tokens (register returns no token).
+      error = await AuthService.register(
+        name: _nameController.text.trim(),
+        email: email,
+        password: password,
+      );
+      error ??= await AuthService.login(email: email, password: password);
+    } else {
+      error = await AuthService.login(email: email, password: password);
+    }
+
+    if (!mounted) return;
+    setState(() => _loading = false);
+
+    if (error != null) {
+      _toast(error);
+      return;
+    }
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,23 +138,31 @@ class _AuthScreenState extends State<AuthScreen> {
 
               if (_signUp) ...[
                 _label('Full name'),
-                const TextField(
+                TextField(
+                  controller: _nameController,
                   stylusHandwritingEnabled: false,
-                  decoration: InputDecoration(hintText: 'Abdulla Abdullayev'),
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(hintText: 'Abdulla Abdullayev'),
                 ),
                 const SizedBox(height: 16),
               ],
               _label('Email'),
-              const TextField(
+              TextField(
+                controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 stylusHandwritingEnabled: false,
-                decoration: InputDecoration(hintText: 'you@example.com', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                    hintText: 'you@example.com', prefixIcon: Icon(Icons.mail_outline_rounded)),
               ),
               const SizedBox(height: 16),
               _label('Password'),
               TextField(
+                controller: _passwordController,
                 obscureText: _obscure,
                 stylusHandwritingEnabled: false,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _loading ? null : _submit(),
                 decoration: InputDecoration(
                   hintText: '••••••••',
                   prefixIcon: const Icon(Icons.lock_outline_rounded),
@@ -91,14 +181,14 @@ class _AuthScreenState extends State<AuthScreen> {
               ],
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () {
-                  HapticType.light.fire();
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const DashboardScreen()),
-                    (route) => false,
-                  );
-                },
-                child: Text(_signUp ? 'Create account' : 'Log in'),
+                onPressed: _loading ? null : _submit,
+                child: _loading
+                    ? const SizedBox(
+                        height: 22,
+                        width: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                      )
+                    : Text(_signUp ? 'Create account' : 'Log in'),
               ),
               const SizedBox(height: 20),
               Row(children: [

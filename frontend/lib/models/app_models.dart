@@ -35,6 +35,36 @@ class JobRole {
     required this.icon,
     required this.color,
   });
+
+  /// Backend-dən gələn JSON-dan JobRole yarat.
+  /// iconName → IconData, colorHex → Color çevirməsi burada olur.
+  factory JobRole.fromJson(Map<String, dynamic> json) {
+    return JobRole(
+      id: json['id'] as String,
+      title: json['title'] as String,
+      category: json['category'] as String,
+      icon: _iconMap[json['iconName']] ?? Icons.work_rounded,
+      color: _colorFromHex(json['colorHex'] as String),
+    );
+  }
+
+  /// iconName String → Flutter IconData
+  static const Map<String, IconData> _iconMap = {
+    'web_rounded':                  Icons.web_rounded,
+    'dns_rounded':                  Icons.dns_rounded,
+    'phone_iphone_rounded':         Icons.phone_iphone_rounded,
+    'insights_rounded':             Icons.insights_rounded,
+    'dashboard_customize_rounded':  Icons.dashboard_customize_rounded,
+    'brush_rounded':                Icons.brush_rounded,
+    'settings_suggest_rounded':     Icons.settings_suggest_rounded,
+    'bug_report_rounded':           Icons.bug_report_rounded,
+  };
+
+  /// "#4F46E5" → Color(0xFF4F46E5)
+  static Color _colorFromHex(String hex) {
+    final clean = hex.replaceAll('#', '');
+    return Color(int.parse('FF$clean', radix: 16));
+  }
 }
 
 /// A single interview question. "Non-variant" questions have no [options]
@@ -84,11 +114,37 @@ class AnswerRecord {
   });
 }
 
-/// One uploaded resource (resume, job description, notes).
+/// One uploaded document, mirrors the backend DocumentResponse.
 class UploadedResource {
+  final String? id;            // backend UUID (null before upload completes)
   final String name;
-  final String type; // PDF, DOCX, TXT
-  final String size;
+  final String type;           // RESUME | REFERENCE | QUESTIONS (or PDF for mock)
+  final int sizeBytes;
+  final String extractionStatus; // NOT_NEEDED | PENDING | DONE | FAILED
 
-  const UploadedResource({required this.name, required this.type, required this.size});
+  const UploadedResource({
+    this.id,
+    required this.name,
+    required this.type,
+    this.sizeBytes = 0,
+    this.extractionStatus = 'NOT_NEEDED',
+  });
+
+  /// Human-readable size for the UI, e.g. "248 KB".
+  String get size {
+    if (sizeBytes <= 0) return '';
+    if (sizeBytes < 1024) return '$sizeBytes B';
+    if (sizeBytes < 1024 * 1024) return '${(sizeBytes / 1024).toStringAsFixed(0)} KB';
+    return '${(sizeBytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  factory UploadedResource.fromJson(Map<String, dynamic> json) {
+    return UploadedResource(
+      id: json['id'] as String?,
+      name: json['name'] as String? ?? 'file',
+      type: json['type'] as String? ?? 'PDF',
+      sizeBytes: (json['sizeBytes'] as num?)?.toInt() ?? 0,
+      extractionStatus: json['extractionStatus'] as String? ?? 'NOT_NEEDED',
+    );
+  }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
-import '../data/mock_data.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
 import '../widgets/interactions.dart';
@@ -19,6 +18,14 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Roles are needed for the home tab and the session setup flow. Load them
+    // now (after login the splash may not have had a token yet).
+    AppState.instance.loadRoles();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +64,10 @@ class _HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppState.instance;
-    return ListView(
+    // Rebuild when roles/userName load so the UI fills in once data arrives.
+    return ListenableBuilder(
+      listenable: state,
+      builder: (context, _) => ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         Row(
@@ -110,27 +120,32 @@ class _HomeTab extends StatelessWidget {
 
         const SectionHeader('Popular roles'),
         const SizedBox(height: 14),
-        SizedBox(
-          height: 124,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: MockData.roles.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (_, i) {
-              final role = MockData.roles[i];
-              return _RoleChip(
-                role: role,
-                onTap: () {
-                  AppState.instance.reset();
-                  AppState.instance.selectedRole = role;
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SelectRoleScreen(skipToLevel: true)),
-                  );
-                },
-              );
-            },
-          ),
-        ),
+        state.rolesLoading
+            ? const SizedBox(
+                height: 124,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : SizedBox(
+                height: 124,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: state.roles.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (_, i) {
+                    final role = state.roles[i];
+                    return _RoleChip(
+                      role: role,
+                      onTap: () {
+                        AppState.instance.reset();
+                        AppState.instance.selectedRole = role;
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const SelectRoleScreen(skipToLevel: true)),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
         const SizedBox(height: 24),
 
         const SectionHeader('Interview tip'),
@@ -156,6 +171,7 @@ class _HomeTab extends StatelessWidget {
           ),
         ),
       ],
+      ),
     );
   }
 

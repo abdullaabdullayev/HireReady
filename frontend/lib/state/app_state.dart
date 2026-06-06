@@ -2,6 +2,9 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/app_models.dart';
 import '../data/mock_data.dart';
+import '../services/token_storage.dart';
+import '../services/jwt_decoder.dart';
+import '../services/role_service.dart';
 
 /// Single in-memory store for the whole app. No backend / persistence —
 /// everything resets when the app restarts.
@@ -9,8 +12,44 @@ class AppState extends ChangeNotifier {
   AppState._();
   static final AppState instance = AppState._();
 
-  // --- Profile (mock) ---
-  String userName = 'Abdulla';
+  // --- Profile ---
+  String userName = 'there';
+
+  /// Update the signed-in user's display name and refresh listeners.
+  void setUserName(String name) {
+    userName = name.trim().isEmpty ? 'there' : name.trim();
+    notifyListeners();
+  }
+
+  /// Restore the session at app startup: if a stored access token exists,
+  /// decode its `name` claim into [userName]. Returns true if the user is
+  /// already logged in (so the splash can skip the Welcome screen).
+  Future<bool> loadSession() async {
+    final token = await TokenStorage.accessToken;
+    if (token == null || token.isEmpty) return false;
+
+    final name = JwtDecoder.claim(token, 'name') ?? await TokenStorage.userName;
+    if (name != null && name.isNotEmpty) {
+      userName = name.trim();
+      notifyListeners();
+    }
+    // Rolları da login zamanı yüklə (dashboard hazır olsun)
+    await loadRoles();
+    return true;
+  }
+
+  // --- Roles (backend-dən yüklənir) ---
+  List<JobRole> roles = [];
+  bool rolesLoading = false;
+
+  Future<void> loadRoles() async {
+    if (roles.isNotEmpty) return;   // artıq yüklənibsə təkrar çəkmə
+    rolesLoading = true;
+    notifyListeners();
+    roles = await RoleService.getRoles();
+    rolesLoading = false;
+    notifyListeners();
+  }
 
   // --- Session configuration being built ---
   JobRole? selectedRole;
@@ -89,10 +128,17 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add an uploaded questions file and "extract" its questions (mock).
+  /// Add a questions file already uploaded to the backend. The backend reports
+  /// whether it could read the file (extractionStatus). The actual extracted
+  /// questions will come from the Session API later; until then we fall back to
+  /// the mock bank so the practice loop still works.
   void addQuestionFile(UploadedResource file) {
-    if (!questionFiles.any((e) => e.name == file.name)) questionFiles.add(file);
-    customQuestions = List<Question>.from(MockData.customFileBank);
+    if (!questionFiles.any((e) => e.id == file.id)) questionFiles.add(file);
+    if (file.extractionStatus == 'DONE') {
+      customQuestions = List<Question>.from(MockData.customFileBank);
+    } else {
+      customQuestions = [];
+    }
     notifyListeners();
   }
 

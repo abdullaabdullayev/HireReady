@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../state/app_state.dart';
 import 'welcome_screen.dart';
+import 'dashboard_screen.dart';
 
 /// Animated brand splash → Welcome.
 class SplashScreen extends StatefulWidget {
@@ -19,15 +21,25 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 1900), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: const WelcomeScreen()),
-        ),
-      );
-    });
+    _bootstrap();
+  }
+
+  Future<void> _bootstrap() async {
+    // Restore any saved session while the splash animation plays.
+    final results = await Future.wait([
+      AppState.instance.loadSession(),
+      Future.delayed(const Duration(milliseconds: 1900)),
+    ]);
+    final loggedIn = results.first as bool;
+    if (!mounted) return;
+
+    final Widget next = loggedIn ? const DashboardScreen() : const WelcomeScreen();
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 500),
+        pageBuilder: (_, a, __) => FadeTransition(opacity: a, child: next),
+      ),
+    );
   }
 
   @override
