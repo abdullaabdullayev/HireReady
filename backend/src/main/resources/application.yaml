@@ -1,5 +1,6 @@
 server:
   port: 8080
+  address: 0.0.0.0
 
 spring:
   datasource:
@@ -27,3 +28,11 @@ ai:
     api-key: ${GROQ_API_KEY}
     base-url: https://api.groq.com/openai/v1
     model: llama-3.3-70b-versatile
+
+app:
+  storage:
+    r2:
+      account-id: ${R2_ACCOUNT_ID}
+      access-key: ${R2_ACCESS_KEY}
+      secret-key: ${R2_SECRET_KEY}
+      bucket: ${R2_BUCKET}

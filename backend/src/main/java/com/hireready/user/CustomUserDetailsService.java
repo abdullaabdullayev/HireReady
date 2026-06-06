@@ -29,7 +29,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         User user = optionalUser.get();
 
-        return new CustomUserDetails(user.getName(),user.getEmail(), user.getRole().name());
+        return new CustomUserDetails(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getPasswordHash(),
+                user.getRole().name()
+        );
 
 
     }
