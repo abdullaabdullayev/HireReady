@@ -1,23 +1,12 @@
-import 'package:flutter/material.dart';
 import '../models/app_models.dart';
 
-/// Static, in-memory content. No backend — this stands in for what an API
-/// or AI service would return.
+/// Static mock content still used while backend endpoints are not yet ready.
+/// Roles have been moved to the backend (/api/roles) and RoleService.
 class MockData {
-  static const List<JobRole> roles = [
-    JobRole(id: 'frontend', title: 'Frontend Developer', category: 'Engineering', icon: Icons.web_rounded, color: Color(0xFF4F46E5)),
-    JobRole(id: 'backend', title: 'Backend Developer', category: 'Engineering', icon: Icons.dns_rounded, color: Color(0xFF0EA5E9)),
-    JobRole(id: 'mobile', title: 'Mobile Engineer', category: 'Engineering', icon: Icons.phone_iphone_rounded, color: Color(0xFF10B981)),
-    JobRole(id: 'data', title: 'Data Scientist', category: 'Data & AI', icon: Icons.insights_rounded, color: Color(0xFF8B5CF6)),
-    JobRole(id: 'pm', title: 'Product Manager', category: 'Product', icon: Icons.dashboard_customize_rounded, color: Color(0xFFF59E0B)),
-    JobRole(id: 'design', title: 'Product Designer', category: 'Design', icon: Icons.brush_rounded, color: Color(0xFFEC4899)),
-    JobRole(id: 'devops', title: 'DevOps Engineer', category: 'Engineering', icon: Icons.settings_suggest_rounded, color: Color(0xFF14B8A6)),
-    JobRole(id: 'qa', title: 'QA Engineer', category: 'Engineering', icon: Icons.bug_report_rounded, color: Color(0xFFEF4444)),
-  ];
 
   static const List<UploadedResource> sampleResources = [
-    UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', size: '248 KB'),
-    UploadedResource(name: 'Job_Description.pdf', type: 'PDF', size: '92 KB'),
+    UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', sizeBytes: 248 * 1024),
+    UploadedResource(name: 'Job_Description.pdf', type: 'PDF', sizeBytes: 92 * 1024),
   ];
 
   /// Default question bank used when the user picks "use default question bank".
