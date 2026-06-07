@@ -19,13 +19,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DocumentService {
 
-
     private final DocumentRepository docRepo;
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final TextExtractor textExtractor;
-
-
 
     public Document upload(User user, MultipartFile file, DocumentType type) {
 
