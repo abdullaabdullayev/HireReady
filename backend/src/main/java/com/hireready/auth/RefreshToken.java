@@ -1,6 +1,5 @@
 package com.hireready.auth;
 
-
 import jakarta.persistence.*;
 
 @Entity

@@ -17,7 +17,6 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     UserRepository userRepository;
 
-
     @Override
     public UserDetails loadUserByUsername(String email)
             throws UsernameNotFoundException {
@@ -36,7 +35,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                 user.getPasswordHash(),
                 user.getRole().name()
         );
-
 
     }
 }

@@ -7,7 +7,6 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-
 @Entity
 @Table(name = "users")
 @Getter
@@ -17,7 +16,6 @@ public class User{
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
-
 
     @Column(name = "user_name")
     private String name;
@@ -34,8 +32,5 @@ public class User{
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
-
-
-
 
 }

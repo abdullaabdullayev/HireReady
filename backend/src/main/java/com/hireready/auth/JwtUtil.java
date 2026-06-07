@@ -41,7 +41,6 @@ public class JwtUtil {
         return UUID.randomUUID().toString();
     }
 
-
     public String extractEmail(String token) {
 
         return Jwts.parser()

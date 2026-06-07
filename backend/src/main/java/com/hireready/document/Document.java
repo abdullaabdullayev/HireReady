@@ -1,6 +1,5 @@
 package com.hireready.document;
 
-
 import com.hireready.common.enums.DocumentType;
 import com.hireready.common.enums.ExtractionStatus;
 import com.hireready.user.User;
@@ -50,6 +49,5 @@ public class Document {
 
     @Column(name = "created_at")
     private Instant createdAt = Instant.now();
-
 
 }
