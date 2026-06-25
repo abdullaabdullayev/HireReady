@@ -5,12 +5,9 @@ import 'screens/welcome_screen.dart';
 import 'services/api_client.dart';
 import 'services/token_storage.dart';
 
-/// Global navigator key so non-widget code (ApiClient) can navigate.
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
-  // When a refresh genuinely fails (refresh token expired/invalid), drop the
-  // user back to Welcome and clear stored tokens — once, not per failed call.
   ApiClient.onSessionExpired = () async {
     await TokenStorage.clear();
     navigatorKey.currentState?.pushAndRemoveUntil(

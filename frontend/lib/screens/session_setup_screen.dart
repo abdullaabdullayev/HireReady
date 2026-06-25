@@ -7,14 +7,6 @@ import '../services/document_service.dart';
 import '../widgets/common.dart';
 import 'practice_screen.dart';
 
-/// Step 3 (final) — a single optional setup screen.
-///
-/// Everything here is optional with smart defaults: the user can tap "Start
-/// practice" immediately and the system fills the gaps:
-///   - No questions file  → system question bank
-///   - No resume          → generic (untailored) questions
-///   - No focus selected  → all categories
-///   - No reference docs   → AI uses general knowledge
 class SessionSetupScreen extends StatefulWidget {
   const SessionSetupScreen({super.key});
 
@@ -26,6 +18,22 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
   bool _uploadingResume = false;
   bool _uploadingReference = false;
   bool _uploadingQuestions = false;
+  bool _starting = false;
+
+  Future<void> _startPractice() async {
+    setState(() => _starting = true);
+    try {
+      await AppState.instance.startSession();
+      if (!mounted) return;
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const PracticeScreen()),
+      );
+    } catch (e) {
+      _toast(friendlyError(e));
+    } finally {
+      if (mounted) setState(() => _starting = false);
+    }
+  }
 
   static const _areas = ['Behavioral', 'Technical', 'System Design', 'Experience', 'Culture fit'];
 
@@ -148,7 +156,6 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- Focus areas (default: all/any) ---
                   _label('Focus areas', 'Leave empty for a balanced mix'),
                   const SizedBox(height: 12),
                   Wrap(
@@ -178,7 +185,6 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // --- Resume (optional) ---
                   _label('Resume', 'Tailors questions to your experience'),
                   const SizedBox(height: 12),
                   if (_uploadingResume)
@@ -199,7 +205,6 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
                     ),
                   const SizedBox(height: 28),
 
-                  // --- Reference materials (optional, multiple) ---
                   _label('Reference materials', 'Books/resources the AI checks answers against'),
                   const SizedBox(height: 12),
                   ...state.referenceMaterials.map((f) => FileRow(
@@ -218,7 +223,6 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
                     ),
                   const SizedBox(height: 28),
 
-                  // --- Questions file (optional) ---
                   _label('Your own questions', 'Skip to use our curated question bank'),
                   const SizedBox(height: 12),
                   ...state.questionFiles.map((f) => FileRow(
@@ -244,14 +248,9 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
               ),
             ),
             FlowBottomBar(
-              label: 'Start practice',
-              enabled: true, // always — smart defaults fill any gaps
-              onNext: () {
-                state.buildSession();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const PracticeScreen()),
-                );
-              },
+              label: _starting ? 'Starting…' : 'Start practice',
+              enabled: !_starting,
+              onNext: _startPractice,
             ),
           ],
         ),
@@ -271,7 +270,6 @@ class _SessionSetupScreenState extends State<SessionSetupScreen> {
   }
 }
 
-/// Shown in place of an UploadBox while a file is being uploaded.
 class _UploadingBox extends StatelessWidget {
   final String label;
   const _UploadingBox({required this.label});

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Difficulty / seniority level for a practice session.
 enum ExperienceLevel { junior, mid, senior }
 
 extension ExperienceLevelX on ExperienceLevel {
@@ -17,10 +16,8 @@ extension ExperienceLevelX on ExperienceLevel {
       };
 }
 
-/// Where the questions for a session come from.
 enum QuestionSource { system, customFile }
 
-/// A job role the user can practice for.
 class JobRole {
   final String id;
   final String title;
@@ -36,8 +33,6 @@ class JobRole {
     required this.color,
   });
 
-  /// Backend-dən gələn JSON-dan JobRole yarat.
-  /// iconName → IconData, colorHex → Color çevirməsi burada olur.
   factory JobRole.fromJson(Map<String, dynamic> json) {
     return JobRole(
       id: json['id'] as String,
@@ -48,7 +43,6 @@ class JobRole {
     );
   }
 
-  /// iconName String → Flutter IconData
   static const Map<String, IconData> _iconMap = {
     'web_rounded':                  Icons.web_rounded,
     'dns_rounded':                  Icons.dns_rounded,
@@ -60,23 +54,20 @@ class JobRole {
     'bug_report_rounded':           Icons.bug_report_rounded,
   };
 
-  /// "#4F46E5" → Color(0xFF4F46E5)
   static Color _colorFromHex(String hex) {
     final clean = hex.replaceAll('#', '');
     return Color(int.parse('FF$clean', radix: 16));
   }
 }
 
-/// A single interview question. "Non-variant" questions have no [options]
-/// and are answered with free text or voice.
 class Question {
   final String id;
   final String prompt;
-  final String category; // e.g. Behavioral, Technical, System Design
-  final List<String> options; // empty => open / non-variant question
-  final int? correctIndex; // for option questions
-  final String modelAnswer; // reference answer used by the mock "AI"
-  final List<String> keyPoints; // graded against the answer
+  final String category;
+  final List<String> options;
+  final int? correctIndex;
+  final String modelAnswer;
+  final List<String> keyPoints;
 
   const Question({
     required this.id,
@@ -89,20 +80,33 @@ class Question {
   });
 
   bool get hasOptions => options.isNotEmpty;
+
+  factory Question.fromJson(Map<String, dynamic> json) {
+    return Question(
+      id: json['id'] as String,
+      prompt: json['prompt'] as String,
+      category: (json['category'] as String?) ?? 'General',
+      options: ((json['options'] as List?) ?? const []).map((e) => e.toString()).toList(),
+      correctIndex: json['correctIndex'] as int?,
+      modelAnswer: (json['modelAnswer'] as String?) ?? '',
+      keyPoints: ((json['keyPoints'] as List?) ?? const []).map((e) => e.toString()).toList(),
+    );
+  }
 }
 
-/// The user's answer + the mock AI evaluation for one question.
 class AnswerRecord {
+  final String? id;
   final Question question;
   final String? textAnswer;
   final int? selectedOption;
   final bool answeredByVoice;
-  final int score; // 0..100
+  final int score;
   final bool isCorrect;
   final String feedback;
   bool markedForReview;
 
   AnswerRecord({
+    this.id,
     required this.question,
     this.textAnswer,
     this.selectedOption,
@@ -114,13 +118,12 @@ class AnswerRecord {
   });
 }
 
-/// One uploaded document, mirrors the backend DocumentResponse.
 class UploadedResource {
-  final String? id;            // backend UUID (null before upload completes)
+  final String? id;
   final String name;
-  final String type;           // RESUME | REFERENCE | QUESTIONS (or PDF for mock)
+  final String type;
   final int sizeBytes;
-  final String extractionStatus; // NOT_NEEDED | PENDING | DONE | FAILED
+  final String extractionStatus;
 
   const UploadedResource({
     this.id,
@@ -130,7 +133,6 @@ class UploadedResource {
     this.extractionStatus = 'NOT_NEEDED',
   });
 
-  /// Human-readable size for the UI, e.g. "248 KB".
   String get size {
     if (sizeBytes <= 0) return '';
     if (sizeBytes < 1024) return '$sizeBytes B';

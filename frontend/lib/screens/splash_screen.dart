@@ -4,7 +4,6 @@ import '../state/app_state.dart';
 import 'welcome_screen.dart';
 import 'dashboard_screen.dart';
 
-/// Animated brand splash → Welcome.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -25,7 +24,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _bootstrap() async {
-    // Restore any saved session while the splash animation plays.
     final results = await Future.wait([
       AppState.instance.loadSession(),
       Future.delayed(const Duration(milliseconds: 1900)),

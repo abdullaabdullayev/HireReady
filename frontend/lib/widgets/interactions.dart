@@ -2,9 +2,6 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Wraps any child so it gently scales down while pressed, then springs back.
-/// Rest state is visually identical to the unwrapped child. Fires an optional
-/// haptic + onTap. Use for custom (non-AppCard) tappable surfaces.
 class Pressable extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -55,8 +52,6 @@ class _PressableState extends State<Pressable> {
   }
 }
 
-/// One-shot entrance: fades in and slides up a few pixels, settling at the
-/// exact final position. Stagger siblings by passing increasing [delay].
 class FadeSlideIn extends StatefulWidget {
   final Widget child;
   final Duration delay;
@@ -102,7 +97,6 @@ class _FadeSlideInState extends State<FadeSlideIn> with SingleTickerProviderStat
   }
 }
 
-/// Counts an integer up from 0 to [value] on first build. Ends at [value].
 class AnimatedCounter extends StatelessWidget {
   final int value;
   final String suffix;
@@ -127,7 +121,6 @@ class AnimatedCounter extends StatelessWidget {
   }
 }
 
-/// Haptic intensity options with a single fire() entry point.
 enum HapticType { none, selection, light, medium, success, error }
 
 extension HapticTypeX on HapticType {
@@ -154,9 +147,6 @@ extension HapticTypeX on HapticType {
   }
 }
 
-/// Ephemeral celebration. Drops colourful confetti from the top across the
-/// width, spins + fades out, then is inert. Place inside a Stack as a
-/// Positioned.fill child — it ignores pointer events so it never blocks taps.
 class ConfettiBurst extends StatefulWidget {
   final int count;
   final Duration duration;
@@ -238,7 +228,7 @@ class _Particle {
 
 class _ConfettiPainter extends CustomPainter {
   final List<_Particle> particles;
-  final double t; // 0..1
+  final double t;
   _ConfettiPainter(this.particles, this.t);
 
   @override

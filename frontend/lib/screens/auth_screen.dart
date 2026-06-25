@@ -4,7 +4,6 @@ import '../widgets/interactions.dart';
 import '../services/auth_service.dart';
 import 'dashboard_screen.dart';
 
-/// Combined Sign up / Log in screen, wired to the backend /api/auth endpoints.
 class AuthScreen extends StatefulWidget {
   final bool startOnSignUp;
   const AuthScreen({super.key, required this.startOnSignUp});
@@ -30,7 +29,6 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  /// Returns an error string if invalid, otherwise null.
   String? _validate() {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -73,7 +71,6 @@ class _AuthScreenState extends State<AuthScreen> {
 
     String? error;
     if (_signUp) {
-      // Register, then log in to obtain tokens (register returns no token).
       error = await AuthService.register(
         name: _nameController.text.trim(),
         email: email,
@@ -117,7 +114,6 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               const SizedBox(height: 28),
 
-              // Segmented toggle
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(color: AppColors.primarySoft, borderRadius: BorderRadius.circular(14)),

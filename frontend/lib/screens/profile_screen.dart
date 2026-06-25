@@ -1,25 +1,63 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../state/app_state.dart';
-import '../data/mock_data.dart';
+import '../models/app_models.dart';
 import '../widgets/common.dart';
 import '../services/auth_service.dart';
+import '../services/document_service.dart';
+import '../services/token_storage.dart';
+import '../services/jwt_decoder.dart';
 import 'welcome_screen.dart';
 
-/// Profile / settings tab (UI only).
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  List<UploadedResource> _docs = [];
+  bool _loadingDocs = true;
+  String _email = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadEmail();
+    _loadDocs();
+  }
+
+  Future<void> _loadEmail() async {
+    final token = await TokenStorage.accessToken;
+    if (token != null) {
+      final sub = JwtDecoder.claim(token, 'sub');
+      if (mounted && sub != null) setState(() => _email = sub);
+    }
+  }
+
+  Future<void> _loadDocs() async {
+    setState(() => _loadingDocs = true);
+    try {
+      final docs = await DocumentService.list();
+      if (mounted) setState(() => _docs = docs);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingDocs = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = AppState.instance;
+    final initial = state.userName.isNotEmpty ? state.userName[0].toUpperCase() : '?';
+
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
       children: [
         const Text('Profile', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
         const SizedBox(height: 20),
 
-        // Profile header
         AppCard(
           child: Row(
             children: [
@@ -31,7 +69,7 @@ class ProfileScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 alignment: Alignment.center,
-                child: Text(state.userName[0],
+                child: Text(initial,
                     style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800)),
               ),
               const SizedBox(width: 16),
@@ -41,8 +79,8 @@ class ProfileScreen extends StatelessWidget {
                   children: [
                     Text(state.userName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 2),
-                    const Text('abdullaabdullayev2402@gmail.com',
-                        style: TextStyle(color: AppColors.muted, fontSize: 13)),
+                    Text(_email.isEmpty ? '—' : _email,
+                        style: const TextStyle(color: AppColors.muted, fontSize: 13)),
                   ],
                 ),
               ),
@@ -52,10 +90,20 @@ class ProfileScreen extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // Documents
-        const SectionHeader('My documents'),
+        SectionHeader('My documents',
+            trailing: _loadingDocs
+                ? const SizedBox(
+                    height: 16, width: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.muted))
+                : null),
         const SizedBox(height: 12),
-        ...MockData.sampleResources.map((r) => Container(
+        if (!_loadingDocs && _docs.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('No documents yet. Upload one when starting a session.',
+                style: TextStyle(color: AppColors.muted, fontSize: 13.5)),
+          ),
+        ..._docs.map((r) => Container(
               margin: const EdgeInsets.only(bottom: 10),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -68,7 +116,8 @@ class ProfileScreen extends StatelessWidget {
                   Container(
                     height: 40,
                     width: 40,
-                    decoration: BoxDecoration(color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(
+                        color: AppColors.danger.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
                     child: const Icon(Icons.picture_as_pdf_rounded, color: AppColors.danger, size: 22),
                   ),
                   const SizedBox(width: 12),
@@ -77,11 +126,15 @@ class ProfileScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(r.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14)),
-                        Text('${r.type} • ${r.size}', style: const TextStyle(color: AppColors.muted, fontSize: 12)),
+                        Text('${r.type} • ${r.size}',
+                            style: const TextStyle(color: AppColors.muted, fontSize: 12)),
                       ],
                     ),
                   ),
-                  const Icon(Icons.more_horiz_rounded, color: AppColors.muted),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline_rounded, color: AppColors.muted),
+                    onPressed: () => _deleteDoc(r),
+                  ),
                 ],
               ),
             )),
@@ -114,6 +167,17 @@ class ProfileScreen extends StatelessWidget {
         const Center(child: Text('HireReady v1.0.0', style: TextStyle(color: AppColors.muted, fontSize: 12))),
       ],
     );
+  }
+
+  Future<void> _deleteDoc(UploadedResource r) async {
+    setState(() => _docs.remove(r));
+    if (r.id != null) {
+      try {
+        await DocumentService.delete(r.id!);
+      } catch (_) {
+        if (mounted) _loadDocs();
+      }
+    }
   }
 
   Widget _settingsGroup(List<Widget> rows) {

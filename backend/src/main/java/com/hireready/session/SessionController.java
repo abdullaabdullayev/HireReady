@@ -4,6 +4,7 @@ import com.hireready.session.dto.*;
 import com.hireready.user.CustomUserDetails;
 import com.hireready.user.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +23,13 @@ public class SessionController {
                                   @RequestBody CreateSessionRequest req) {
         User user = service.currentUser(principal);
         return service.create(user, req);
+    }
+
+    @GetMapping("/active")
+    public ResponseEntity<ActiveSessionResponse> active(@AuthenticationPrincipal CustomUserDetails principal) {
+        User user = service.currentUser(principal);
+        ActiveSessionResponse r = service.activeResponse(user);
+        return r == null ? ResponseEntity.noContent().build() : ResponseEntity.ok(r);
     }
 
     @GetMapping("/{id}")

@@ -5,10 +5,10 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import '../widgets/interactions.dart';
 import 'select_role_screen.dart';
+import 'practice_screen.dart';
 import 'progress_screen.dart';
 import 'profile_screen.dart';
 
-/// Main app shell with bottom navigation.
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -22,9 +22,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Roles are needed for the home tab and the session setup flow. Load them
-    // now (after login the splash may not have had a token yet).
     AppState.instance.loadRoles();
+    AppState.instance.loadActiveSession();
   }
 
   @override
@@ -64,7 +63,6 @@ class _HomeTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppState.instance;
-    // Rebuild when roles/userName load so the UI fills in once data arrives.
     return ListenableBuilder(
       listenable: state,
       builder: (context, _) => ListView(
@@ -98,7 +96,6 @@ class _HomeTab extends StatelessWidget {
         ),
         const SizedBox(height: 22),
 
-        // Stats row
         FadeSlideIn(
           delay: const Duration(milliseconds: 60),
           child: Row(
@@ -114,7 +111,10 @@ class _HomeTab extends StatelessWidget {
         ),
         const SizedBox(height: 20),
 
-        // Primary CTA — "Start new session?" in the flow
+        if (state.hasActiveSession) ...[
+          const FadeSlideIn(delay: Duration(milliseconds: 100), child: _ContinueSessionCard()),
+          const SizedBox(height: 14),
+        ],
         const FadeSlideIn(delay: Duration(milliseconds: 120), child: _StartSessionCard()),
         const SizedBox(height: 24),
 
@@ -190,6 +190,67 @@ class _HomeTab extends StatelessWidget {
             ),
             const SizedBox(height: 2),
             Text(label, style: const TextStyle(fontSize: 11.5, color: AppColors.muted, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ContinueSessionCard extends StatelessWidget {
+  const _ContinueSessionCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppState.instance;
+    final total = state.sessionQuestions.length;
+    final done = state.answers.length;
+    return Pressable(
+      haptic: HapticType.light,
+      onTap: () async {
+        await state.loadActiveSession();
+        if (!context.mounted || !state.hasActiveSession) return;
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => const PracticeScreen()),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.35), width: 1.5),
+          boxShadow: kCardShadow,
+        ),
+        child: Row(
+          children: [
+            Container(
+              height: 48,
+              width: 48,
+              decoration: BoxDecoration(
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.play_arrow_rounded, color: AppColors.primary, size: 30),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Continue your session',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 4),
+                  Text(
+                    total > 0
+                        ? '$done of $total answered — pick up where you left off'
+                        : 'Pick up where you left off',
+                    style: const TextStyle(color: AppColors.inkSoft, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.primary),
           ],
         ),
       ),

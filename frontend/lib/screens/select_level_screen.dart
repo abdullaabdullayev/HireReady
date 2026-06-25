@@ -5,7 +5,6 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'session_setup_screen.dart';
 
-/// Step 2 — pick the experience level.
 class SelectLevelScreen extends StatefulWidget {
   const SelectLevelScreen({super.key});
 

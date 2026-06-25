@@ -47,4 +47,13 @@ public class Question {
 
     @Enumerated(EnumType.STRING)
     private ExperienceLevel level;
+
+    @Column(name = "owner_user_id")
+    private Long ownerUserId;
+
+    @Column(name = "source_document_id")
+    private UUID sourceDocumentId;
+
+    @Column(name = "seq")
+    private Integer seq;
 }

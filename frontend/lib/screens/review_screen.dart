@@ -4,7 +4,6 @@ import '../state/app_state.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
 
-/// Review the questions the user got wrong or flagged.
 class ReviewScreen extends StatelessWidget {
   const ReviewScreen({super.key});
 

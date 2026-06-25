@@ -1,29 +1,22 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../models/app_models.dart';
-import '../data/mock_data.dart';
 import '../services/token_storage.dart';
 import '../services/jwt_decoder.dart';
 import '../services/role_service.dart';
+import '../services/session_service.dart';
+import '../services/analytics_service.dart';
 
-/// Single in-memory store for the whole app. No backend / persistence —
-/// everything resets when the app restarts.
 class AppState extends ChangeNotifier {
   AppState._();
   static final AppState instance = AppState._();
 
-  // --- Profile ---
   String userName = 'there';
 
-  /// Update the signed-in user's display name and refresh listeners.
   void setUserName(String name) {
     userName = name.trim().isEmpty ? 'there' : name.trim();
     notifyListeners();
   }
 
-  /// Restore the session at app startup: if a stored access token exists,
-  /// decode its `name` claim into [userName]. Returns true if the user is
-  /// already logged in (so the splash can skip the Welcome screen).
   Future<bool> loadSession() async {
     final token = await TokenStorage.accessToken;
     if (token == null || token.isEmpty) return false;
@@ -33,17 +26,15 @@ class AppState extends ChangeNotifier {
       userName = name.trim();
       notifyListeners();
     }
-    // Rolları da login zamanı yüklə (dashboard hazır olsun)
     await loadRoles();
     return true;
   }
 
-  // --- Roles (backend-dən yüklənir) ---
   List<JobRole> roles = [];
   bool rolesLoading = false;
 
   Future<void> loadRoles() async {
-    if (roles.isNotEmpty) return;   // artıq yüklənibsə təkrar çəkmə
+    if (roles.isNotEmpty) return;
     rolesLoading = true;
     notifyListeners();
     roles = await RoleService.getRoles();
@@ -51,36 +42,44 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Session configuration being built ---
   JobRole? selectedRole;
   ExperienceLevel level = ExperienceLevel.mid;
   QuestionSource source = QuestionSource.system;
   bool useCustomRequirements = false;
   final Set<String> focusAreas = {'Behavioral', 'Technical'};
 
-  /// Resume uploaded in "Set requirements" (optional) — used by the AI to
-  /// tailor questions/feedback (mock).
   UploadedResource? resume;
 
-  /// Reference books/resources uploaded under custom requirements (optional) —
-  /// the AI uses them to check answers and generate questions (mock).
   final List<UploadedResource> referenceMaterials = [];
 
-  /// Custom questions file(s) uploaded in "Question source". When chosen, the
-  /// session is built from the questions extracted from them (mock).
   final List<UploadedResource> questionFiles = [];
-  List<Question> customQuestions = [];
 
-  // --- Active practice run ---
   List<Question> _sessionQuestions = [];
   final List<AnswerRecord> answers = [];
 
   List<Question> get sessionQuestions => _sessionQuestions;
 
-  // --- Lifetime stats (mock starting values to make analytics look alive) ---
-  int sessionsCompleted = 7;
-  int questionsAnswered = 58;
-  int dayStreak = 4;
+  int sessionsCompleted = 0;
+  int questionsAnswered = 0;
+  int dayStreak = 0;
+
+  Analytics analytics = Analytics.empty();
+  bool analyticsLoading = false;
+
+  Future<void> loadAnalytics() async {
+    analyticsLoading = true;
+    notifyListeners();
+    try {
+      analytics = await AnalyticsService.get();
+      sessionsCompleted = analytics.sessions;
+      questionsAnswered = analytics.questions;
+      dayStreak = analytics.dayStreak;
+    } catch (_) {
+    } finally {
+      analyticsLoading = false;
+      notifyListeners();
+    }
+  }
 
   void reset() {
     selectedRole = null;
@@ -93,7 +92,6 @@ class AppState extends ChangeNotifier {
       ..clear()
       ..addAll({'Behavioral', 'Technical'});
     questionFiles.clear();
-    customQuestions = [];
     _sessionQuestions = [];
     answers.clear();
     notifyListeners();
@@ -128,118 +126,141 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Add a questions file already uploaded to the backend. The backend reports
-  /// whether it could read the file (extractionStatus). The actual extracted
-  /// questions will come from the Session API later; until then we fall back to
-  /// the mock bank so the practice loop still works.
   void addQuestionFile(UploadedResource file) {
     if (!questionFiles.any((e) => e.id == file.id)) questionFiles.add(file);
-    if (file.extractionStatus == 'DONE') {
-      customQuestions = List<Question>.from(MockData.customFileBank);
-    } else {
-      customQuestions = [];
-    }
     notifyListeners();
   }
 
   void removeQuestionFile(UploadedResource file) {
     questionFiles.remove(file);
-    if (questionFiles.isEmpty) customQuestions = [];
     notifyListeners();
   }
 
-  /// Build the question list for the run. The source is decided automatically:
-  /// if the user uploaded a questions file we could read, use those questions;
-  /// otherwise fall back to the system question bank. No manual toggle needed.
-  void buildSession() {
-    final bool hasCustom = questionFiles.isNotEmpty && customQuestions.isNotEmpty;
-    source = hasCustom ? QuestionSource.customFile : QuestionSource.system;
-    // Custom requirements are implied by any optional customization the user did.
-    useCustomRequirements = referenceMaterials.isNotEmpty ||
-        resume != null ||
-        focusAreas.length != 2; // touched away from the default pair
+  String? sessionId;
+  bool hasActiveSession = false;
 
-    _sessionQuestions =
-        List<Question>.from(hasCustom ? customQuestions : MockData.defaultBank);
+  Future<void> loadActiveSession() async {
+    try {
+      final active = await SessionService.active();
+      if (active == null || active.questions.isEmpty) {
+        hasActiveSession = false;
+      } else {
+        sessionId = active.id;
+        _sessionQuestions = active.questions;
+        answers.clear();
+        for (final a in active.answers) {
+          Question? q;
+          for (final question in active.questions) {
+            if (question.id == a.questionId) {
+              q = question;
+              break;
+            }
+          }
+          if (q == null) continue;
+          answers.add(AnswerRecord(
+            id: a.id,
+            question: q,
+            textAnswer: a.textAnswer,
+            selectedOption: a.selectedOption,
+            answeredByVoice: a.answeredByVoice,
+            score: a.score,
+            isCorrect: a.correct,
+            feedback: a.feedback,
+            markedForReview: a.markedForReview,
+          ));
+        }
+        hasActiveSession = answers.length < _sessionQuestions.length;
+      }
+    } catch (_) {
+      hasActiveSession = false;
+    }
+    notifyListeners();
+  }
+
+  /// Index of the first question that has not been answered yet.
+  int get resumeIndex {
+    final answered = answers.map((a) => a.question.id).toSet();
+    for (var i = 0; i < _sessionQuestions.length; i++) {
+      if (!answered.contains(_sessionQuestions[i].id)) return i;
+    }
+    return _sessionQuestions.isEmpty ? 0 : _sessionQuestions.length - 1;
+  }
+
+  Future<void> startSession() async {
+    UploadedResource? questionsFile;
+    for (final f in questionFiles) {
+      if (f.extractionStatus == 'DONE' && f.id != null) {
+        questionsFile = f;
+        break;
+      }
+    }
+    source = questionsFile != null ? QuestionSource.customFile : QuestionSource.system;
+
+    final created = await SessionService.create(
+      roleId: selectedRole?.id,
+      level: level.name.toUpperCase(),
+      focusAreas: focusAreas.toList(),
+      questionsFileId: questionsFile?.id,
+      resumeFileId: resume?.id,
+      referenceFileIds:
+          referenceMaterials.map((e) => e.id).whereType<String>().toList(),
+    );
+    sessionId = created.id;
+    _sessionQuestions = created.questions;
     answers.clear();
+    hasActiveSession = true;
     notifyListeners();
   }
 
-  /// Mock "AI" grading. Produces a believable score + written feedback so the
-  /// evaluation screen feels real without any server call.
-  AnswerRecord evaluate({
+  Future<AnswerRecord> submitAnswer({
     required Question question,
     String? text,
     int? selectedOption,
     bool byVoice = false,
-  }) {
-    int score;
-    bool correct;
-    String feedback;
-
-    if (question.hasOptions) {
-      correct = selectedOption == question.correctIndex;
-      score = correct ? 100 : 0;
-      feedback = correct
-          ? 'Correct. ${question.modelAnswer}'
-          : 'Not quite. ${question.modelAnswer}';
-    } else {
-      final answer = (text ?? '').trim();
-      final words = answer.isEmpty ? 0 : answer.split(RegExp(r'\s+')).length;
-      final lower = answer.toLowerCase();
-
-      // Reward length + how many key points are touched.
-      final hits = question.keyPoints.where((k) {
-        final kw = k.toLowerCase().split(' ').firstWhere((w) => w.length > 3, orElse: () => k.toLowerCase());
-        return lower.contains(kw);
-      }).length;
-
-      final lengthScore = (min(words, 80) / 80 * 60).round();
-      final pointScore = question.keyPoints.isEmpty
-          ? 30
-          : (hits / question.keyPoints.length * 40).round();
-      score = (lengthScore + pointScore).clamp(0, 100);
-      correct = score >= 60;
-
-      final missed = question.keyPoints
-          .where((k) {
-            final kw = k.toLowerCase().split(' ').firstWhere((w) => w.length > 3, orElse: () => k.toLowerCase());
-            return !lower.contains(kw);
-          })
-          .toList();
-
-      if (words < 8) {
-        feedback = 'Your answer is quite short. Add more detail and structure. '
-            'Aim to cover: ${question.keyPoints.join(", ")}.';
-      } else if (missed.isEmpty) {
-        feedback = 'Strong, well-rounded answer that touches all the key areas. '
-            'Tighten it with a concrete metric to make it memorable.';
-      } else {
-        feedback = 'Good start. To strengthen it, also address: ${missed.join(", ")}.';
-      }
-    }
-
+  }) async {
+    final eval = await SessionService.submitAnswer(
+      sessionId: sessionId!,
+      questionId: question.id,
+      text: text,
+      selectedOption: selectedOption,
+      answeredByVoice: byVoice,
+    );
     final record = AnswerRecord(
+      id: eval.answerId,
       question: question,
       textAnswer: text,
       selectedOption: selectedOption,
       answeredByVoice: byVoice,
-      score: score,
-      isCorrect: correct,
-      feedback: feedback,
+      score: eval.score,
+      isCorrect: eval.correct,
+      feedback: eval.feedback,
     );
     answers.add(record);
     notifyListeners();
     return record;
   }
 
-  void finishSession() {
-    sessionsCompleted++;
-    questionsAnswered += answers.length;
+  Future<void> toggleReview(AnswerRecord record, bool marked) async {
+    record.markedForReview = marked;
     notifyListeners();
+    if (sessionId != null && record.id != null) {
+      try {
+        await SessionService.markForReview(
+            sessionId: sessionId!, answerId: record.id!, marked: marked);
+      } catch (_) {}
+    }
   }
 
-  // --- Derived metrics for the results / analytics screens ---
+  Future<void> finishSession() async {
+    if (sessionId != null) {
+      try {
+        await SessionService.complete(sessionId!);
+      } catch (_) {}
+    }
+    hasActiveSession = false;
+    await loadAnalytics();
+  }
+
   int get correctCount => answers.where((a) => a.isCorrect).length;
 
   double get averageScore => answers.isEmpty

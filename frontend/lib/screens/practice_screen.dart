@@ -5,13 +5,12 @@ import '../state/app_state.dart';
 import '../models/app_models.dart';
 import '../widgets/common.dart';
 import '../widgets/interactions.dart';
+import '../services/document_service.dart' show friendlyError;
 import 'voice_answer_sheet.dart';
 import 'session_complete_screen.dart';
 
 enum _Phase { answering, evaluating, result }
 
-/// The heart of the app: shows a question, accepts a text/voice/option answer,
-/// runs the mock AI evaluation, then lets the user review and continue.
 class PracticeScreen extends StatefulWidget {
   const PracticeScreen({super.key});
 
@@ -33,6 +32,15 @@ class _PracticeScreenState extends State<PracticeScreen> {
   int get _total => _state.sessionQuestions.length;
 
   @override
+  void initState() {
+    super.initState();
+    // Resume an in-progress session at the first unanswered question.
+    if (_state.sessionQuestions.isNotEmpty) {
+      _index = _state.resumeIndex;
+    }
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();
@@ -45,20 +53,30 @@ class _PracticeScreenState extends State<PracticeScreen> {
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
     setState(() => _phase = _Phase.evaluating);
-    // Simulate the AI "thinking".
-    await Future.delayed(const Duration(milliseconds: 1400));
-    if (!mounted) return;
-    final record = _state.evaluate(
-      question: _q,
-      text: _q.hasOptions ? null : _controller.text,
-      selectedOption: _selectedOption,
-      byVoice: _answeredByVoice,
-    );
-    setState(() {
-      _record = record;
-      _phase = _Phase.result;
-    });
-    (record.isCorrect ? HapticType.success : HapticType.error).fire();
+    try {
+      final record = await _state.submitAnswer(
+        question: _q,
+        text: _q.hasOptions ? null : _controller.text,
+        selectedOption: _selectedOption,
+        byVoice: _answeredByVoice,
+      );
+      if (!mounted) return;
+      setState(() {
+        _record = record;
+        _phase = _Phase.result;
+      });
+      (record.isCorrect ? HapticType.success : HapticType.error).fire();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _phase = _Phase.answering);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.danger,
+          content: Text(friendlyError(e)),
+        ),
+      );
+    }
   }
 
   void _next() {
@@ -140,7 +158,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 if (_phase != _Phase.evaluating) _bottomAction(),
               ],
             ),
-            // Celebrate a high score on this question.
             if (_phase == _Phase.result && (_record?.score ?? 0) >= 80)
               Positioned.fill(child: ConfettiBurst(key: ValueKey('confetti-$_index'))),
           ],
@@ -173,7 +190,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  // ---- Answering ----
   Widget _answerArea() {
     if (_q.hasOptions) return _options();
     return _openAnswer();
@@ -225,7 +241,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
             maxLines: 7,
             minLines: 5,
             keyboardType: TextInputType.multiline,
-            stylusHandwritingEnabled: false, // keyboard text or voice only — no stylus handwriting
+            stylusHandwritingEnabled: false,
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               hintText: 'Type your answer here, or use voice…',
@@ -257,7 +273,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
     );
   }
 
-  // ---- Result ----
   Widget _resultArea() {
     final r = _record!;
     return Column(
@@ -298,7 +313,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ),
         const SizedBox(height: 16),
 
-        // AI feedback
         _infoBlock(
           icon: Icons.auto_awesome_rounded,
           color: AppColors.primary,
@@ -307,7 +321,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ),
         const SizedBox(height: 12),
 
-        // Model answer / explanation
         _infoBlock(
           icon: Icons.menu_book_rounded,
           color: AppColors.info,
@@ -333,9 +346,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
         ],
 
         const SizedBox(height: 16),
-        // Mark for review
         AppCard(
-          onTap: () => setState(() => r.markedForReview = !r.markedForReview),
+          onTap: () => _state.toggleReview(r, !r.markedForReview),
           padding: const EdgeInsets.all(16),
           border: Border.all(color: r.markedForReview ? AppColors.warning : Colors.transparent, width: 2),
           child: Row(
@@ -351,7 +363,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
                 activeThumbColor: AppColors.warning,
                 onChanged: (v) {
                   HapticType.selection.fire();
-                  setState(() => r.markedForReview = v);
+                  _state.toggleReview(r, v);
                 },
               ),
             ],
@@ -427,7 +439,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Leave session?'),
-        content: const Text('Your progress in this session will be lost.'),
+        content: const Text('Your progress is saved — you can continue from Home anytime.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Stay')),
           TextButton(
@@ -444,7 +456,6 @@ class _PracticeScreenState extends State<PracticeScreen> {
   }
 }
 
-/// "AI is thinking" loading state shown during evaluation.
 class _Evaluating extends StatelessWidget {
   const _Evaluating();
 

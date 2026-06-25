@@ -16,6 +16,8 @@ public class QuestionSeeder implements CommandLineRunner {
     @Override
     public void run(String... args) throws Exception {
 
+        if (!repo.findByOwnerUserIdIsNull().isEmpty()) return;
+
         repo.save(open(
                 "Tell me about a challenging project you worked on. What made it hard and how did you handle it?",
                 "Behavioral",

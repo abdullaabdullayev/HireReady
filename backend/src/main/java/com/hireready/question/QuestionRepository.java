@@ -6,5 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 public interface QuestionRepository extends JpaRepository<Question, UUID> {
-    List<Question> findByCategoryIn(List<String> categories);
+    List<Question> findByCategoryInAndOwnerUserIdIsNull(List<String> categories);
+    List<Question> findByOwnerUserIdIsNull();
+    List<Question> findBySourceDocumentIdOrderBySeqAsc(UUID sourceDocumentId);
 }

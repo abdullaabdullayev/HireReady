@@ -5,10 +5,7 @@ import '../models/app_models.dart';
 import '../widgets/common.dart';
 import 'select_level_screen.dart';
 
-/// Step 1 — pick the job role to practice for.
 class SelectRoleScreen extends StatefulWidget {
-  /// When launched from a role chip, the role is preselected and we still let
-  /// the user confirm before moving on.
   final bool skipToLevel;
   const SelectRoleScreen({super.key, this.skipToLevel = false});
 

@@ -6,18 +6,12 @@ import '../state/app_state.dart';
 import 'jwt_decoder.dart';
 import 'token_storage.dart';
 
-/// Talks to the Spring Boot /api/auth endpoints.
-///
-/// Each call returns `null` on success, or a human-readable error string on
-/// failure (so the UI can show it in a snackbar).
 class AuthService {
   static const _base = ApiConfig.baseUrl;
   static const _timeout = Duration(seconds: 15);
 
   static const _jsonHeaders = {'Content-Type': 'application/json'};
 
-  /// POST /api/auth/register  body: {name, email, password}
-  /// Backend returns 200 + text on success, 400 + text if email exists.
   static Future<String?> register({
     required String name,
     required String email,
@@ -33,7 +27,6 @@ class AuthService {
           .timeout(_timeout);
 
       if (res.statusCode == 200) {
-        // Backend doesn't return the name, so remember what the user typed.
         await TokenStorage.saveName(name);
         return null;
       }
@@ -45,8 +38,6 @@ class AuthService {
     }
   }
 
-  /// POST /api/auth/login  body: {email, password}
-  /// On 200 saves {accessToken, refreshToken}. Returns null on success.
   static Future<String?> login({
     required String email,
     required String password,
@@ -67,8 +58,6 @@ class AuthService {
           accessToken,
           (data['refreshToken'] as String?) ?? '',
         );
-        // The name lives in the access token's "name" claim. Fall back to the
-        // response body, then the locally stored name (from sign-up).
         final name = JwtDecoder.claim(accessToken, 'name') ??
             (data['name'] as String?) ??
             await TokenStorage.userName;
@@ -89,7 +78,6 @@ class AuthService {
     }
   }
 
-  /// POST /api/auth/logout  body: {refreshToken}. Always clears local tokens.
   static Future<void> logout() async {
     final refresh = await TokenStorage.refreshToken;
     if (refresh != null && refresh.isNotEmpty) {
@@ -102,7 +90,6 @@ class AuthService {
             )
             .timeout(_timeout);
       } catch (_) {
-        // Ignore network errors on logout — we still clear locally.
       }
     }
     await TokenStorage.clear();

@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-public interface JobRoleRepository extends JpaRepository<JobRole,Long> {
+public interface JobRoleRepository extends JpaRepository<JobRole,String> {
     List<JobRole> findAllByOrderByDisplayOrderAsc();
 }
