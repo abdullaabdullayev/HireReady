@@ -3,11 +3,7 @@ import 'dart:io';
 import '../models/app_models.dart';
 import 'api_client.dart';
 
-/// Talks to the backend /api/documents endpoints (file upload/list/delete).
-/// All calls go through ApiClient, which auto-refreshes an expired token and
-/// retries — so the user no longer gets logged out mid-session.
 class DocumentService {
-  /// Uploads a file with its type (RESUME | REFERENCE | QUESTIONS).
   static Future<UploadedResource> upload({
     required String filePath,
     required String fileName,
@@ -25,7 +21,6 @@ class DocumentService {
     throw Exception(_errorFrom(res.statusCode, res.body));
   }
 
-  /// All documents for the current user.
   static Future<List<UploadedResource>> list() async {
     final res = await ApiClient.get('/documents');
     if (res.statusCode == 200) {
@@ -35,7 +30,6 @@ class DocumentService {
     throw Exception(_errorFrom(res.statusCode, res.body));
   }
 
-  /// Delete by id.
   static Future<void> delete(String id) async {
     final res = await ApiClient.delete('/documents/$id');
     if (res.statusCode != 200 && res.statusCode != 204) {
@@ -47,7 +41,6 @@ class DocumentService {
       body.isNotEmpty ? body : 'Request failed ($code)';
 }
 
-/// Convenience: wraps network/session errors into friendly text.
 String friendlyError(Object e) {
   if (e is SessionExpiredException) return e.message;
   if (e is SocketException) return 'Cannot reach the server. Is the backend running?';

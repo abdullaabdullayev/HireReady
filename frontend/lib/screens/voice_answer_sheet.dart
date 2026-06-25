@@ -1,12 +1,10 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:speech_to_text/speech_to_text.dart';
 import '../theme/app_theme.dart';
 import '../widgets/interactions.dart';
 
-/// UI-only voice answer capture. Shows a mic button, animated waveform and
-/// timer while "recording", then returns a mock transcript. No real audio is
-/// recorded (that would require native mic/transcription — out of scope).
 class VoiceAnswerSheet extends StatefulWidget {
   const VoiceAnswerSheet({super.key});
 
@@ -15,44 +13,81 @@ class VoiceAnswerSheet extends StatefulWidget {
 }
 
 class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
+  final SpeechToText _speech = SpeechToText();
+  bool _available = false;
   bool _recording = false;
   bool _done = false;
+  String _transcript = '';
+  String _error = '';
   int _seconds = 0;
   Timer? _timer;
 
-  static const _mockTranscript =
-      'In my last role I led a project that was running behind schedule. I broke the work '
-      'into smaller milestones, re-prioritised with the team, and shipped the core feature '
-      'two weeks early, which increased user retention by about fifteen percent.';
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
 
-  void _toggle() {
+  Future<void> _init() async {
+    try {
+      _available = await _speech.initialize(
+        onError: (e) => setState(() => _error = 'Recognition error: ${e.errorMsg}'),
+        onStatus: (s) {
+          if (s == 'done' || s == 'notListening') {
+            if (mounted && _recording) _stop();
+          }
+        },
+      );
+      if (mounted) setState(() {});
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Speech recognition unavailable on this device.');
+    }
+  }
+
+  Future<void> _toggle() async {
     if (_recording) {
       _stop();
-    } else {
-      HapticType.medium.fire();
-      setState(() {
-        _recording = true;
-        _seconds = 0;
-        _done = false;
-      });
-      _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-        setState(() => _seconds++);
-      });
+      return;
     }
+    if (!_available) {
+      setState(() => _error = 'Speech recognition is not available.');
+      return;
+    }
+    HapticType.medium.fire();
+    setState(() {
+      _recording = true;
+      _done = false;
+      _transcript = '';
+      _error = '';
+      _seconds = 0;
+    });
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _seconds++));
+
+    await _speech.listen(
+      onResult: (r) => setState(() => _transcript = r.recognizedWords),
+      listenOptions: SpeechListenOptions(
+        partialResults: true,
+        cancelOnError: true,
+        listenFor: const Duration(minutes: 2),
+        pauseFor: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _stop() {
     _timer?.cancel();
     HapticType.light.fire();
+    _speech.stop();
     setState(() {
       _recording = false;
-      _done = true;
+      _done = _transcript.trim().isNotEmpty;
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _speech.cancel();
     super.dispose();
   }
 
@@ -85,35 +120,44 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
           ),
           const SizedBox(height: 6),
           Text(
-            _recording ? 'Speak your answer clearly' : (_done ? 'Review the transcript below' : 'Answer the question out loud'),
+            _recording
+                ? 'Speak your answer clearly'
+                : (_done ? 'Review the transcript below' : 'Answer the question out loud'),
             style: const TextStyle(color: AppColors.muted, fontSize: 13.5),
           ),
           const SizedBox(height: 28),
 
-          // Waveform
-          SizedBox(
-            height: 56,
-            child: _recording ? const _Waveform() : _idleBars(),
-          ),
+          SizedBox(height: 56, child: _recording ? const _Waveform() : _idleBars()),
           const SizedBox(height: 16),
           Text(_time,
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
-                fontFeatures: const [],
                 color: _recording ? AppColors.danger : AppColors.ink,
               )),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+
+          if (_recording && _transcript.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: AppColors.canvas, borderRadius: BorderRadius.circular(16)),
+              child: Text(_transcript, style: const TextStyle(fontSize: 14, height: 1.4, color: AppColors.inkSoft)),
+            ),
+            const SizedBox(height: 16),
+          ],
+
+          if (_error.isNotEmpty) ...[
+            Text(_error, style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+            const SizedBox(height: 12),
+          ],
 
           if (_done) ...[
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.canvas,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Text(_mockTranscript, style: TextStyle(fontSize: 14, height: 1.45, color: AppColors.inkSoft)),
+              decoration: BoxDecoration(color: AppColors.canvas, borderRadius: BorderRadius.circular(16)),
+              child: Text(_transcript, style: const TextStyle(fontSize: 14, height: 1.45, color: AppColors.inkSoft)),
             ),
             const SizedBox(height: 20),
             Row(
@@ -122,6 +166,7 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
                   child: OutlinedButton(
                     onPressed: () => setState(() {
                       _done = false;
+                      _transcript = '';
                       _seconds = 0;
                     }),
                     child: const Text('Re-record'),
@@ -132,7 +177,7 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
                   child: ElevatedButton(
                     onPressed: () {
                       HapticType.selection.fire();
-                      Navigator.pop(context, _mockTranscript);
+                      Navigator.pop(context, _transcript.trim());
                     },
                     child: const Text('Use answer'),
                   ),
@@ -181,7 +226,6 @@ class _VoiceAnswerSheetState extends State<VoiceAnswerSheet> {
   }
 }
 
-/// Animated bars that bounce while "recording".
 class _Waveform extends StatefulWidget {
   const _Waveform();
 
@@ -209,7 +253,6 @@ class _WaveformState extends State<_Waveform> with SingleTickerProviderStateMixi
         mainAxisAlignment: MainAxisAlignment.center,
         children: List.generate(25, (i) {
           final phase = sin((_c.value * 2 * pi) + i) * 0.5 + 0.5;
-          // Keep within the 56px container (max seed 1.2 -> 6 + 1.2*40 = 54).
           final h = (6 + phase * _seeds[i] * 40).clamp(6.0, 54.0);
           return Container(
             width: 3.5,

@@ -1,15 +1,7 @@
 import '../models/app_models.dart';
 
-/// Static mock content still used while backend endpoints are not yet ready.
-/// Roles have been moved to the backend (/api/roles) and RoleService.
 class MockData {
 
-  static const List<UploadedResource> sampleResources = [
-    UploadedResource(name: 'Resume_2026.pdf', type: 'PDF', sizeBytes: 248 * 1024),
-    UploadedResource(name: 'Job_Description.pdf', type: 'PDF', sizeBytes: 92 * 1024),
-  ];
-
-  /// Default question bank used when the user picks "use default question bank".
   static const List<Question> defaultBank = [
     Question(
       id: 'q1',
@@ -68,7 +60,6 @@ class MockData {
     ),
   ];
 
-  /// Questions "extracted" from an uploaded resume (mock).
   static const List<Question> resumeBank = [
     Question(
       id: 'r1',
@@ -104,8 +95,6 @@ class MockData {
     ),
   ];
 
-  /// Questions "extracted" from a custom questions file the user uploads in
-  /// the Set requirements step (mock).
   static const List<Question> customFileBank = [
     Question(
       id: 'c1',

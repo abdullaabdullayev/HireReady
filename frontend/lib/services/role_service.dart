@@ -2,7 +2,6 @@ import 'dart:convert';
 import '../models/app_models.dart';
 import 'api_client.dart';
 
-/// Backend /api/roles endpoint-indən rolları çəkir.
 class RoleService {
   static Future<List<JobRole>> getRoles() async {
     try {
@@ -11,15 +10,12 @@ class RoleService {
         final list = jsonDecode(res.body) as List<dynamic>;
         return list.map((e) => JobRole.fromJson(e as Map<String, dynamic>)).toList();
       }
-      // Backend cavab verməsə mock data qaytar (offline/dev rejimi)
       return _fallback;
     } catch (_) {
-      // Şəbəkə xətası, session bitməsi və s. — fallback göstər.
       return _fallback;
     }
   }
 
-  /// Backend işləməyəndə (offline/dev) göstərilən ehtiyat siyahı.
   static final List<JobRole> _fallback = [
     JobRole.fromJson({'id': 'frontend', 'title': 'Frontend Developer', 'category': 'Engineering', 'iconName': 'web_rounded',                 'colorHex': '#4F46E5'}),
     JobRole.fromJson({'id': 'backend',  'title': 'Backend Developer',  'category': 'Engineering', 'iconName': 'dns_rounded',                 'colorHex': '#0EA5E9'}),

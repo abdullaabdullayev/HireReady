@@ -1,6 +1,5 @@
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
-/// Persists JWT access + refresh tokens in the platform secure store.
 class TokenStorage {
   static const _storage = FlutterSecureStorage();
   static const _kAccess = 'access_token';

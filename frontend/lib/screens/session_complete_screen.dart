@@ -6,8 +6,6 @@ import '../widgets/interactions.dart';
 import 'dashboard_screen.dart';
 import 'review_screen.dart';
 
-/// "Session complete" results screen with the post-session options from the
-/// flow: view analytics, review wrong questions, return to dashboard.
 class SessionCompleteScreen extends StatefulWidget {
   const SessionCompleteScreen({super.key});
 
@@ -19,7 +17,6 @@ class _SessionCompleteScreenState extends State<SessionCompleteScreen> {
   @override
   void initState() {
     super.initState();
-    // Celebratory tap as the results land.
     WidgetsBinding.instance.addPostFrameCallback((_) => HapticType.success.fire());
   }
 
@@ -65,7 +62,6 @@ class _SessionCompleteScreenState extends State<SessionCompleteScreen> {
                   ),
                   const SizedBox(height: 28),
 
-                  // Score summary
                   AppCard(
                     child: Column(
                       children: [
@@ -170,7 +166,6 @@ class _SessionCompleteScreenState extends State<SessionCompleteScreen> {
             ),
           ],
         ),
-            // Confetti rains over the results — ephemeral, ignores taps.
             const Positioned.fill(child: ConfettiBurst()),
           ],
         ),

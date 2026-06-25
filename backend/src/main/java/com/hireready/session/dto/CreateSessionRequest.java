@@ -15,5 +15,6 @@ public class CreateSessionRequest {
     private ExperienceLevel level;
     private List<String> focusAreas;
     private UUID questionsFileId;
-    private Long resumeFileId;
+    private UUID resumeFileId;
+    private List<UUID> referenceFileIds;
 }

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'interactions.dart';
 
-/// A white rounded card with the standard soft shadow. When [onTap] is set it
-/// adds a subtle press-scale + selection haptic (rest appearance unchanged).
 class AppCard extends StatefulWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -67,7 +65,6 @@ class _AppCardState extends State<AppCard> {
   }
 }
 
-/// Small pill label used for categories / tags.
 class TagPill extends StatelessWidget {
   final String text;
   final Color color;
@@ -98,7 +95,6 @@ class TagPill extends StatelessWidget {
   }
 }
 
-/// Rounded gradient header used at the top of flow screens.
 class GradientBanner extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -159,9 +155,8 @@ class GradientBanner extends StatelessWidget {
   }
 }
 
-/// Thin labelled step indicator for the setup flow (e.g. "Step 2 of 4").
 class StepDots extends StatelessWidget {
-  final int current; // 1-based
+  final int current;
   final int total;
   const StepDots({super.key, required this.current, required this.total});
 
@@ -185,9 +180,8 @@ class StepDots extends StatelessWidget {
   }
 }
 
-/// A circular score ring used on evaluation/results.
 class ScoreRing extends StatelessWidget {
-  final int score; // 0..100
+  final int score;
   final double size;
   const ScoreRing({super.key, required this.score, this.size = 120});
 
@@ -235,7 +229,6 @@ class ScoreRing extends StatelessWidget {
   }
 }
 
-/// Dashed-border upload drop zone, reused across the setup flow.
 class UploadBox extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -276,7 +269,6 @@ class UploadBox extends StatelessWidget {
   }
 }
 
-/// A row showing an uploaded file with an optional trailing badge / remove.
 class FileRow extends StatelessWidget {
   final String name;
   final String meta;
@@ -327,7 +319,6 @@ class FileRow extends StatelessWidget {
   }
 }
 
-/// Sticky bottom action bar used across the setup flow.
 class FlowBottomBar extends StatelessWidget {
   final bool enabled;
   final VoidCallback onNext;
@@ -362,7 +353,6 @@ class FlowBottomBar extends StatelessWidget {
   }
 }
 
-/// Section heading with optional trailing action.
 class SectionHeader extends StatelessWidget {
   final String title;
   final Widget? trailing;

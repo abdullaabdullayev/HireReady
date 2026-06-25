@@ -36,19 +36,15 @@ public class DocumentService {
         doc.setSizeBytes(file.getSize());
         doc.setStorageKey(storageKey);
 
-        if(type == DocumentType.QUESTIONS){
-            String text = "";
-            try(InputStream in = storageService.load(storageKey)){
-                text = textExtractor.extractPdf(in);
-            }catch(Exception ignored){}
+        String text = "";
+        try(InputStream in = storageService.load(storageKey)){
+            text = textExtractor.extract(doc.getName(), in);
+        }catch(Exception ignored){}
 
-            doc.setExtractedText(text);
-            doc.setExtractionStatus(
-                    text.isEmpty() ? ExtractionStatus.FAILED : ExtractionStatus.DONE
-            );
-        }else {
-            doc.setExtractionStatus(ExtractionStatus.NOT_NEEDED);
-        }
+        doc.setExtractedText(text);
+        doc.setExtractionStatus(
+                text.isEmpty() ? ExtractionStatus.FAILED : ExtractionStatus.DONE
+        );
         return docRepo.save(doc);
     }
 
