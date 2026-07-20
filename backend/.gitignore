@@ -41,6 +41,7 @@ out/
 application-local.yml
 application-local.properties
 application-secret.yml
+docker-compose.yaml
 .env
 *.env
 
