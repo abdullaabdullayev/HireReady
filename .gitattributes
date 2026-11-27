@@ -1,0 +1,6 @@
+# Count the Flutter client as UI code so GitHub shows the Java backend as the main language.
+frontend/** linguist-vendored
+
+backend/gradlew text eol=lf
+*.bat text eol=crlf
+*.jar binary

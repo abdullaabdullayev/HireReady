@@ -4,8 +4,9 @@
 
 ### AI-powered interview preparation — practice, get instant feedback, get hired.
 
+[![Backend CI](https://github.com/abdullaabdullayev/HireReady/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/abdullaabdullayev/HireReady/actions/workflows/backend-ci.yml)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.x-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.0-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![Java](https://img.shields.io/badge/Java-21-orange?logo=openjdk&logoColor=white)](https://openjdk.org)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org)
 
@@ -101,11 +102,21 @@ HireReady/
 ### Backend
 ```bash
 cd backend
-# Create a .env with: JWT_SECRET, DB_USERNAME, DB_PASSWORD,
-#                     GROQ_API_KEY, R2_ACCOUNT_ID, R2_ACCESS_KEY,
-#                     R2_SECRET_KEY, R2_BUCKET
+cp .env.example .env   # then fill in DB, JWT, Groq and R2 values
 ./gradlew bootRun
 ```
+
+### Tests
+```bash
+cd backend
+./gradlew test
+```
+
+Unit tests cover AI answer evaluation (including the rule-based fallback when the LLM is
+unavailable), JWT generation and validation, and progress analytics (average score, day streak,
+skill breakdown). The application-context test starts a disposable PostgreSQL with
+**Testcontainers** and is skipped when Docker is not available. All tests run on every push via
+GitHub Actions.
 
 ### Frontend
 ```bash
